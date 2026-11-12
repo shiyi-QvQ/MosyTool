@@ -1,0 +1,9 @@
+把要安装的驱动解压到这个目录即可（可以带子目录）。
+
+程序会扫描下面所有 .inf 文件，连同同目录的 .sys / .cat 一起装进系统的
+驱动仓库，然后再绑到选中的端口上。
+
+常见驱动：
+  高通 9008  QDLoader / qcusb  驱动
+  MTK        VCOM / Preloader  驱动
+  libusbK / libusb-win32       驱动（Zadig 同款）

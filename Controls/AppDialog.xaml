@@ -1,0 +1,53 @@
+<Window x:Class="Mosytool.Controls.AppDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+        Title="提示"
+        Width="460"
+        SizeToContent="Height"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="Transparent"
+        ResizeMode="NoResize"
+        ShowInTaskbar="False"
+        WindowStartupLocation="CenterOwner"
+        FontFamily="Microsoft YaHei UI">
+
+    <Border Margin="14"
+            CornerRadius="12"
+            Background="{DynamicResource SolidBackgroundFillColorBaseBrush}"
+            BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
+            BorderThickness="1">
+        <Border.Effect>
+            <DropShadowEffect BlurRadius="26" ShadowDepth="6" Opacity="0.3" Color="Black"/>
+        </Border.Effect>
+
+        <Grid Margin="24,22,24,20" MouseLeftButtonDown="Root_MouseLeftButtonDown">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <StackPanel Orientation="Horizontal">
+                <Border x:Name="IconHost" Width="36" Height="36" CornerRadius="18"
+                        Background="{DynamicResource AccentFillColorDefaultBrush}">
+                    <ui:SymbolIcon x:Name="IconGlyph" Symbol="Info24" FontSize="19"
+                                   Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                </Border>
+                <TextBlock x:Name="TitleText" Text="提示" FontSize="15" FontWeight="SemiBold"
+                           VerticalAlignment="Center" Margin="12,0,0,0"
+                           Foreground="{DynamicResource TextFillColorPrimaryBrush}"/>
+            </StackPanel>
+
+            <ScrollViewer Grid.Row="1" MaxHeight="320" VerticalScrollBarVisibility="Auto"
+                          HorizontalScrollBarVisibility="Disabled" Margin="0,16,0,0">
+                <TextBlock x:Name="MessageText" TextWrapping="Wrap" FontSize="13" LineHeight="21"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+            </ScrollViewer>
+
+            <StackPanel x:Name="ButtonHost" Grid.Row="2" Orientation="Horizontal"
+                        HorizontalAlignment="Right" Margin="0,22,0,0"/>
+        </Grid>
+    </Border>
+</Window>

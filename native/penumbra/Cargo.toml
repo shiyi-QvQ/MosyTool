@@ -1,0 +1,41 @@
+[workspace]
+resolver = "3"
+# 本目录只收编了 penumbra 的 `core`（penumbra-mtk），供 native/penumbra-ffi 以
+# `path = "../penumbra/core"` 引用；上游的 `tui`（antumbra CLI/TUI）未收编，
+# 因为 Mosytool 已直接走 FFI，不再依赖 antumbra.exe。
+members = [
+    "core",
+    "core/penumbra-macros",
+]
+default-members = ["core"]
+
+[workspace.package]
+edition = "2024"
+license = "AGPL-3.0-or-later"
+authors = ["Shomy <git@itssho.my>"]
+homepage = "https://penumbra.itssho.my"
+repository = "https://github.com/shomykohai/penumbra"
+
+[profile.dev]
+opt-level = 0
+debug = true
+lto = false
+codegen-units = 16
+
+[profile.nightly]
+inherits = "release"
+debug = "line-tables-only"
+lto = "thin"
+codegen-units = 1
+strip = false
+
+[profile.release]
+opt-level = 3
+lto = "fat"
+codegen-units = 1
+strip = "symbols"
+debug = false
+
+[profile.bench]
+inherits = "release"
+debug = true

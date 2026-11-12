@@ -1,0 +1,213 @@
+<Page x:Class="Mosytool.Views.XiaomiFlashPage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+      xmlns:ctl="clr-namespace:Mosytool.Controls"
+      ScrollViewer.CanContentScroll="False"
+      Title="小米官方线刷">
+
+    <Grid>
+        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+            <StackPanel Margin="{StaticResource Mt.PagePadding}">
+                <TextBlock Style="{StaticResource Mt.PageTitle}" Text="小米官方线刷" />
+                <TextBlock Style="{StaticResource Mt.PageSubtitle}"
+                           Text="解析小米 fastboot 包里的 flash_all 脚本，展开变量后逐条执行。脚本本身不会被运行，只读取其中的 fastboot 命令。" />
+
+                <!-- ============ 设备状态 ============ -->
+                <Border Style="{StaticResource Mt.Card}" Margin="0,18,0,0">
+                    <StackPanel>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel Orientation="Horizontal">
+                                <ui:SymbolIcon Style="{StaticResource Mt.SectionIcon}" Symbol="PhoneLaptop24" />
+                                <TextBlock Style="{StaticResource Mt.SectionTitle}" Text="设备状态" />
+                                <Border x:Name="StateDot" Style="{StaticResource Mt.StatusDot}" Margin="14,0,0,0" />
+                                <TextBlock x:Name="StateText" Style="{StaticResource Mt.Label}" Text="未检测" Margin="7,0,0,0" />
+                            </StackPanel>
+
+                            <ui:Button x:Name="DetectButton" Grid.Column="1" Appearance="Secondary"
+                                       Icon="{ui:SymbolIcon ArrowSync24}" Content="刷新设备"
+                                       Click="DetectButton_Click" />
+                        </Grid>
+
+                        <Border Style="{StaticResource Mt.Divider}" Margin="0,16,0,0" />
+
+                        <Grid Margin="0,14,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="92" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Style="{StaticResource Mt.Label}" Text="机型" />
+                            <TextBlock x:Name="ModelText" Grid.Column="1" Text="-" Style="{StaticResource Mt.Body}" />
+                        </Grid>
+
+                        <Grid Margin="0,10,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="92" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Style="{StaticResource Mt.Label}" Text="BL 状态" />
+                            <TextBlock x:Name="UnlockText" Grid.Column="1" Text="-" Style="{StaticResource Mt.Body}" />
+                        </Grid>
+
+                        <Grid Margin="0,10,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="92" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Style="{StaticResource Mt.Label}" Text="当前槽位" />
+                            <TextBlock x:Name="SlotText" Grid.Column="1" Text="-" Style="{StaticResource Mt.Body}" />
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <!-- ============ 线刷包 ============ -->
+                <Border Style="{StaticResource Mt.Card}" Margin="0,14,0,0">
+                    <StackPanel>
+                        <StackPanel Orientation="Horizontal">
+                            <ui:SymbolIcon Style="{StaticResource Mt.SectionIcon}" Symbol="Archive24" />
+                            <TextBlock Style="{StaticResource Mt.SectionTitle}" Text="线刷包" />
+                        </StackPanel>
+
+                        <TextBlock Style="{StaticResource Mt.BodyMuted}" Margin="0,12,0,0" TextWrapping="Wrap"
+                                   Text="选择解压后的 fastboot 包目录（里面有 images\ 和 flash_all*.bat）。.tgz 压缩包请先解压。" />
+
+                        <Grid Margin="0,12,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBox x:Name="RomPathBox" IsReadOnly="True" FontSize="13"
+                                     Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                     ToolTip="当前选中的线刷包目录" />
+                            <ui:Button x:Name="BrowseRomButton" Grid.Column="1" Appearance="Secondary"
+                                       Margin="12,0,0,0" Content="选择目录…" Click="BrowseRom_Click" />
+                        </Grid>
+
+                        <Grid Margin="0,14,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="92" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Style="{StaticResource Mt.Label}" Text="刷写模式" />
+                            <ComboBox x:Name="ModeCombo" Grid.Column="1" IsTextSearchEnabled="True"
+                                      DisplayMemberPath="Display"
+                                      Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                      SelectionChanged="ModeCombo_SelectionChanged"
+                                      ToolTip="flash_all=清空数据 / except_storage=保留数据 / lock=回锁" />
+                        </Grid>
+
+                        <StackPanel Orientation="Horizontal" Margin="0,14,0,0">
+                            <ui:Button x:Name="ParseButton" Appearance="Secondary" IsEnabled="False"
+                                       Icon="{ui:SymbolIcon Document24}" Content="解析脚本"
+                                       Click="Parse_Click" />
+                            <ui:Button x:Name="ExportPlanButton" Appearance="Secondary" Margin="8,0,0,0"
+                                       IsEnabled="False" Content="导出步骤清单" Click="ExportPlan_Click"
+                                       ToolTip="把解析出来的命令按顺序写成 txt，便于刷前核对" />
+                        </StackPanel>
+
+                        <TextBlock x:Name="PlanSummaryText" Style="{StaticResource Mt.Caption}"
+                                   Margin="0,14,0,0" TextWrapping="Wrap"
+                                   Text="尚未选择线刷包。" />
+
+                        <TextBlock x:Name="WarningsText" Style="{StaticResource Mt.Caption}"
+                                   Margin="0,8,0,0" TextWrapping="Wrap" Visibility="Collapsed"
+                                   Foreground="{DynamicResource Mt.Status.WarnBrush}" />
+                    </StackPanel>
+                </Border>
+
+                <!-- ============ 步骤清单 ============ -->
+                <Border Style="{StaticResource Mt.Card}" Margin="0,14,0,0">
+                    <StackPanel>
+                        <StackPanel Orientation="Horizontal">
+                            <ui:SymbolIcon Style="{StaticResource Mt.SectionIcon}" Symbol="Box24" />
+                            <TextBlock Style="{StaticResource Mt.SectionTitle}" Text="步骤清单" />
+                        </StackPanel>
+
+                        <TextBlock x:Name="StepCountText" Style="{StaticResource Mt.Caption}" Margin="0,12,0,10"
+                                   Text="解析后在这里列出将要执行的每一条 fastboot 命令。" />
+
+                        <DataGrid x:Name="StepGrid" Height="280" AutoGenerateColumns="False"
+                                  IsReadOnly="True" CanUserAddRows="False" CanUserDeleteRows="False"
+                                  CanUserResizeRows="False" RowHeight="30"
+                                  SelectionMode="Single" SelectionUnit="FullRow"
+                                  HeadersVisibility="Column" BorderThickness="0" Background="Transparent"
+                                  GridLinesVisibility="Horizontal" FontSize="12.5">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="#"      Binding="{Binding Index}"         Width="0.35*"/>
+                                <DataGridTextColumn Header="动作"   Binding="{Binding KindText}"      Width="0.6*"/>
+                                <DataGridTextColumn Header="分区"   Binding="{Binding Partition}"     Width="1.1*"/>
+                                <DataGridTextColumn Header="大小"   Binding="{Binding ImageSizeText}" Width="0.8*"/>
+                                <DataGridTextColumn Header="命令"   Binding="{Binding CommandText}"   Width="3.4*"/>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </StackPanel>
+                </Border>
+
+                <!-- ============ 执行 ============ -->
+                <Border Style="{StaticResource Mt.Card}" Margin="0,14,0,0">
+                    <StackPanel>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel Orientation="Horizontal">
+                                <ui:SymbolIcon Style="{StaticResource Mt.SectionIcon}" Symbol="ArrowDownload24" />
+                                <TextBlock Style="{StaticResource Mt.SectionTitle}" Text="开始刷写" />
+                            </StackPanel>
+
+                            <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                <ui:Button x:Name="StartButton" Appearance="Primary" IsEnabled="False"
+                                           Icon="{ui:SymbolIcon Play24}" Content="开始刷写"
+                                           Click="Start_Click" />
+                                <ui:Button x:Name="AbortButton" Appearance="Secondary" Margin="8,0,0,0"
+                                           IsEnabled="False" Content="中止" Click="Abort_Click" />
+                            </StackPanel>
+                        </Grid>
+
+                        <CheckBox x:Name="StopOnErrorCheck" Content="任一步失败即停止" IsChecked="True"
+                                  Margin="0,16,0,0"
+                                  Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                  ToolTip="不勾选则跳过失败项继续往下刷，适合个别分区不存在的机器" />
+
+                        <ProgressBar x:Name="FlashProgress" Height="6" Margin="0,14,0,0"
+                                     Minimum="0" Maximum="100" Value="0" />
+
+                        <TextBlock x:Name="CurrentStepText" Style="{StaticResource Mt.Caption}"
+                                   Margin="0,10,0,0" Text="等待开始。" />
+                    </StackPanel>
+                </Border>
+
+                <!-- ============ 日志 ============ -->
+                <Border Style="{StaticResource Mt.Card}" Margin="0,14,0,0">
+                    <StackPanel>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Orientation="Horizontal">
+                                <ui:SymbolIcon Style="{StaticResource Mt.SectionIcon}" Symbol="BookOpen24" />
+                                <TextBlock Style="{StaticResource Mt.SectionTitle}" Text="刷写日志" />
+                            </StackPanel>
+                            <ui:Button Grid.Column="1" Appearance="Secondary" Content="清空" Click="ClearLog_Click" />
+                        </Grid>
+
+                        <ctl:LogView x:Name="LogBox" Height="240" Margin="0,16,0,0"
+                                     FontFamily="Consolas" FontSize="12"
+                                     VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"
+                                     Background="{DynamicResource Mt.InsetFillBrush}"
+                                     BorderThickness="0" Padding="12"
+                                     Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</Page>

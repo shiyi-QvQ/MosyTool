@@ -1,0 +1,142 @@
+<Page x:Class="Mosytool.Views.AndroidGeneralPage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+      xmlns:ctl="clr-namespace:Mosytool.Controls"
+      ScrollViewer.CanContentScroll="False"
+      Title="安卓通用">
+
+    <Grid>
+        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+            <StackPanel Margin="{StaticResource Mt.PagePadding}">
+                <TextBlock Style="{StaticResource Mt.PageTitle}" Text="安卓通用" />
+                <TextBlock Style="{StaticResource Mt.PageSubtitle}"
+                           Text="双清、擦谷歌锁、槽位切换，以及 ADB 环境修复、DDR 识别、基带调试端口、USB 模式切换。带 root 的操作会自动检测权限。" />
+
+                <!-- ============ 设备状态 ============ -->
+                <Border Style="{StaticResource Mt.Card}" Margin="0,18,0,0">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Orientation="Horizontal">
+                            <ui:SymbolIcon Style="{StaticResource Mt.SectionIcon}" Symbol="PhoneLaptop24" />
+                            <TextBlock Style="{StaticResource Mt.SectionTitle}" Text="设备" />
+                            <Border x:Name="StateDot" Style="{StaticResource Mt.StatusDot}" Margin="14,0,0,0" />
+                            <TextBlock x:Name="StateText" Style="{StaticResource Mt.Label}" Text="未检测" Margin="7,0,0,0" />
+                            <Border Style="{StaticResource Mt.Divider}" Width="1" Height="14" Margin="14,0" />
+                            <TextBlock x:Name="DeviceText" Style="{StaticResource Mt.BodyMuted}"
+                                       Text="-" VerticalAlignment="Center" />
+                        </StackPanel>
+
+                        <ui:Button x:Name="RefreshButton" Grid.Column="1" Appearance="Secondary"
+                                   Icon="{ui:SymbolIcon ArrowSync24}" Content="重新检测"
+                                   Click="RefreshButton_Click" />
+                    </Grid>
+                </Border>
+
+                <!-- ============ Fastboot 扩展 ============ -->
+                <Border Style="{StaticResource Mt.Card}" Margin="0,14,0,0">
+                    <StackPanel>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Orientation="Horizontal">
+                                <ui:SymbolIcon Style="{StaticResource Mt.SectionIcon}" Symbol="Flash24" />
+                                <TextBlock Style="{StaticResource Mt.SectionTitle}" Text="Fastboot 扩展" />
+                            </StackPanel>
+                            <TextBlock x:Name="FastbootHint" Grid.Column="1" Style="{StaticResource Mt.Caption}"
+                                       Text="需要设备处于 Fastboot / FastbootD 模式" VerticalAlignment="Center" />
+                        </Grid>
+
+                        <WrapPanel Margin="0,16,0,0">
+                            <ui:Button x:Name="FactoryResetButton" Appearance="Secondary" Margin="0,0,8,8"
+                                       Content="格式化设备（双清）" Click="FactoryReset_Click"
+                                       ToolTip="fastboot erase userdata + erase metadata + -w" />
+                            <ui:Button x:Name="EraseFrpButton" Appearance="Secondary" Margin="0,0,8,8"
+                                       Content="擦除谷歌锁（FRP）" Click="EraseFrp_Click"
+                                       ToolTip="fastboot erase frp，建议在 FastbootD 下执行" />
+                            <ui:Button x:Name="SlotAButton" Appearance="Secondary" Margin="0,0,8,8"
+                                       Content="切到 A 槽" Click="SlotA_Click" ToolTip="fastboot set_active a" />
+                            <ui:Button x:Name="SlotBButton" Appearance="Secondary" Margin="0,0,8,8"
+                                       Content="切到 B 槽" Click="SlotB_Click" ToolTip="fastboot set_active b" />
+                        </WrapPanel>
+
+                        <TextBlock Style="{StaticResource Mt.BodyMuted}" Margin="0,4,0,0" TextWrapping="Wrap"
+                                   Text="双清会清空全部用户数据；擦 FRP 用于去掉开机时的谷歌账号校验；槽位切换仅 A/B 双槽机型有效。" />
+                    </StackPanel>
+                </Border>
+
+                <!-- ============ ADB 扩展 ============ -->
+                <Border Style="{StaticResource Mt.Card}" Margin="0,14,0,0">
+                    <StackPanel>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Orientation="Horizontal">
+                                <ui:SymbolIcon Style="{StaticResource Mt.SectionIcon}" Symbol="PhoneDesktop24" />
+                                <TextBlock Style="{StaticResource Mt.SectionTitle}" Text="ADB 扩展" />
+                            </StackPanel>
+                            <TextBlock x:Name="AdbHint" Grid.Column="1" Style="{StaticResource Mt.Caption}"
+                                       Text="需要设备在线并已授权 USB 调试" VerticalAlignment="Center" />
+                        </Grid>
+
+                        <WrapPanel Margin="0,16,0,0">
+                            <ui:Button x:Name="FixAdbButton" Appearance="Secondary" Margin="0,0,8,8"
+                                       Content="修复 ADB 异常" Click="FixAdb_Click"
+                                       ToolTip="重建 /data/local/tmp 权限与 SELinux 上下文，投屏/推送失败时先点它" />
+                            <ui:Button x:Name="DdrButton" Appearance="Secondary" Margin="0,0,8,8"
+                                       Content="读一加 DDR 版本" Click="Ddr_Click"
+                                       ToolTip="getprop ro.boot.ddr_type：0 = DDR4、1 = DDR5" />
+                            <ui:Button x:Name="DiagOnButton" Appearance="Secondary" Margin="0,0,8,8"
+                                       Content="强开基带调试端口" Click="DiagOn_Click"
+                                       ToolTip="setprop sys.usb.config diag,adb（需要 root）" />
+                            <ui:Button x:Name="DiagOffButton" Appearance="Secondary" Margin="0,0,8,8"
+                                       Content="关闭基带调试端口" Click="DiagOff_Click"
+                                       ToolTip="setprop sys.usb.config adb（需要 root）" />
+                            <ui:Button x:Name="MtpButton" Appearance="Secondary" Margin="0,0,8,8"
+                                       Content="切换文件传输" Click="Mtp_Click"
+                                       ToolTip="svc usb setFunctions mtp，设备不识别为 U 盘/手机时用" />
+                            <ui:Button x:Name="MiuiUsbButton" Appearance="Primary" Margin="0,0,8,8"
+                                       Content="强开小米 USB 安全设置" Click="MiuiUsb_Click"
+                                       ToolTip="开启 USB 安装与 Fastboot 常驻（需要 root，仅小米/红米）" />
+                        </WrapPanel>
+
+                        <TextBlock Style="{StaticResource Mt.BodyMuted}" Margin="0,4,0,0" TextWrapping="Wrap"
+                                   Text="基带调试端口与小米 USB 安全设置需要 root（su），未授权时会直接提示。" />
+                    </StackPanel>
+                </Border>
+
+                <!-- ============ 日志 ============ -->
+                <Border Style="{StaticResource Mt.Card}" Margin="0,14,0,0">
+                    <StackPanel>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Orientation="Horizontal">
+                                <ui:SymbolIcon Style="{StaticResource Mt.SectionIcon}" Symbol="BookOpen24" />
+                                <TextBlock Style="{StaticResource Mt.SectionTitle}" Text="操作日志" />
+                            </StackPanel>
+                            <ui:Button Grid.Column="1" Appearance="Secondary" Content="清空" Click="ClearLog_Click" />
+                        </Grid>
+
+                        <ctl:LogView x:Name="LogBox" Height="190" Margin="0,16,0,0"
+                                     FontFamily="Consolas" FontSize="12"
+                                     VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"
+                                     Background="{DynamicResource Mt.InsetFillBrush}"
+                                     BorderThickness="0" Padding="12"
+                                     Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</Page>

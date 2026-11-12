@@ -1,0 +1,227 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+    <!-- 让还原的 assets 始终包含 win-x64 目标，避免 NETSDK1047 -->
+    <RuntimeIdentifiers>win-x64</RuntimeIdentifiers>
+
+    <!-- 客户端版本号：发版时改这里（四段，与后台 version_name 保持一致）。
+         这里不写死会让程序集恒为 1.0.0.0，客户端向 /api/public/update/latest 上报的
+         current 也就永远是 1.0.0，后台会一直判「可更新」——配合 force_update 就是关不掉的强更。 -->
+    <Version>1.1.0.2</Version>
+
+    <!-- 开源许可：AGPL-3.0-or-later，许可证全文见项目根目录 LICENSE -->
+    <PackageLicenseExpression>AGPL-3.0-or-later</PackageLicenseExpression>
+    <Copyright>Copyright (C) 2026 Mosytool Contributors</Copyright>
+  </PropertyGroup>
+
+  <!-- 发布配置：x64 框架依赖（非自包含）+ 严格单文件。兼容 Win10(1809+)/Win11，但目标机器必须
+       先装 .NET 10 桌面运行时（Windows Desktop Runtime x64，WPF 属于 Desktop Runtime）。
+       托管侧（Mosytool.dll、*.json、WPF-UI、SharpCompress…）打进 Mosytool.exe，
+       必须落盘的外部二进制（adb / fastboot / 两个 *_ffi.dll）以 EmbeddedResource 内嵌，
+       首次运行时由 ToolPaths 解压到 %LOCALAPPDATA%\Mosytool\tools。发布产物就是单个 exe，
+       旁边不需要任何 tools\ 文件。
+
+       为什么必须解压而不能只躺在 bundle 里：adb.exe / fastboot.exe 要用 Process.Start 当独立
+       进程拉起，原生层是 P/Invoke 从磁盘加载的 dll，都得是真实文件。
+       为什么不用 %TEMP%：备份目录(backups\)、驱动下载目录、scrcpy 安装目录、头像缓存全基于
+       BaseDirectory 读写，%TEMP% 里的东西随时可能被清掉。同理不要打开
+       IncludeAllContentForSelfExtract —— 它会把 BaseDirectory 变成 %TEMP% 里的解包目录。 -->
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <SelfContained>false</SelfContained>
+    <PublishSingleFile>true</PublishSingleFile>
+    <PublishTrimmed>false</PublishTrimmed>
+    <DebugType>None</DebugType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Using Remove="System.Drawing" />
+    <Using Remove="System.Windows.Forms" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- 公告正文按 Markdown 排版（Controls\MarkdownRenderer.cs）：只用来解析语法树，
+         渲染仍是自己画的 WPF FlowDocument，跟主题色一致。 -->
+    <PackageReference Include="Markdig" Version="0.41.3" />
+    <PackageReference Include="SharpCompress" Version="0.50.4" />
+    <PackageReference Include="System.Management" Version="10.0.12" />
+    <PackageReference Include="WPF-UI" Version="4.3.0" />
+  </ItemGroup>
+
+  <!-- adb / fastboot 等外部工具：内嵌进 exe（EmbeddedResource），首次运行时由 ToolPaths
+       解压到 %LOCALAPPDATA%\Mosytool\tools。LogicalName 就是解压出来的相对路径，
+       ToolPaths 直接按前缀 tools/ 遍历清单，所以这里加一个文件就等于多解压一个文件。 -->
+  <ItemGroup>
+    <EmbeddedResource Include="tools\adb.exe"                 LogicalName="tools/adb.exe"                 Type="Non-Resx" WithCulture="false" />
+    <EmbeddedResource Include="tools\AdbWinApi.dll"           LogicalName="tools/AdbWinApi.dll"           Type="Non-Resx" WithCulture="false" />
+    <EmbeddedResource Include="tools\AdbWinUsbApi.dll"        LogicalName="tools/AdbWinUsbApi.dll"        Type="Non-Resx" WithCulture="false" />
+    <EmbeddedResource Include="tools\AndroidAssistHelper.dll" LogicalName="tools/AndroidAssistHelper.dll" Type="Non-Resx" WithCulture="false" />
+    <EmbeddedResource Include="tools\fastboot.exe"            LogicalName="tools/fastboot.exe"            Type="Non-Resx" WithCulture="false" />
+
+    <!-- magiskboot：boot / init_boot 解包与重打包、ramdisk(cpio) 注入、AVB 1.0 签名、
+         dtb 与 compression 处理，以及从 payload.bin 直接抽取 boot/init_boot。
+         官方 Magisk 只发 Android 版（APK 里的 libmagiskboot.so 是 ELF，Windows 跑不了），
+         这里用 CircleCashTeam/magiskboot_build 从 Magisk 源码交叉编译出的
+         Windows x86_64 静态单文件（standalone，无附加 dll 依赖）。
+         上游 Magisk 为 GPL-3.0，全文见 tools\LICENSE-Magisk.txt。 -->
+    <EmbeddedResource Include="tools\magiskboot.exe"          LogicalName="tools/magiskboot.exe"          Type="Non-Resx" WithCulture="false" />
+    <EmbeddedResource Include="tools\LICENSE-Penumbra.txt"    LogicalName="tools/LICENSE-Penumbra.txt"    Type="Non-Resx" WithCulture="false" />
+    <EmbeddedResource Include="tools\LICENSE-Magisk.txt"      LogicalName="tools/LICENSE-Magisk.txt"      Type="Non-Resx" WithCulture="false" />
+
+    <!-- kptools：KernelSU 系（KernelSU / SukiSU / ReSukiSU / APatch）的离线内核修补工具，
+         做 unpack boot.img → -p 打 kpimg → repack 三步。上游 KernelPatch 只发 Linux/Android 版，
+         这里用的 Windows x86_64 构建依赖 msys 运行时，两个 dll 必须和 exe 同目录
+         （Windows 按 exe 所在目录找依赖，与工作目录无关），所以整组放进 tools\kpatch\。 -->
+    <EmbeddedResource Include="tools\kpatch\kptools.exe"      LogicalName="tools/kpatch/kptools.exe"      Type="Non-Resx" WithCulture="false" />
+    <EmbeddedResource Include="tools\kpatch\msys-2.0.dll"     LogicalName="tools/kpatch/msys-2.0.dll"     Type="Non-Resx" WithCulture="false" />
+    <EmbeddedResource Include="tools\kpatch\msys-z.dll"       LogicalName="tools/kpatch/msys-z.dll"       Type="Non-Resx" WithCulture="false" />
+
+    <!-- LKM 模式：ksud.exe 负责把 kernelsu.ko 打进 ramdisk，模块按「管理器家族 + KMI」分目录放。
+         LogicalName 用 RecursiveDir 保留子目录，Windows 上它会带反斜杠，
+         ToolPaths 解压时两种分隔符都做了归一化。 -->
+    <EmbeddedResource Include="tools\lkm\**\*.exe;tools\lkm\**\*.ko"
+                      LogicalName="tools/lkm/%(RecursiveDir)%(Filename)%(Extension)"
+                      Type="Non-Resx" WithCulture="false" />
+
+    <!-- 开发时照旧把真实文件拷进 bin\：调试目录里 tools\ 是真实目录，ToolPaths 优先用它，
+         不会多解压一份，也方便直接替换 adb 版本。都不进发布目录 —— 发布只有一个 exe。 -->
+    <Content Include="tools\adb.exe;tools\AdbWinApi.dll;tools\AdbWinUsbApi.dll;tools\AndroidAssistHelper.dll;tools\fastboot.exe;tools\magiskboot.exe;tools\LICENSE-Penumbra.txt;tools\LICENSE-Magisk.txt"
+             CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Never" />
+
+    <!-- kptools / lkm 放到 bin\...\tools\，调试时直接命中真实目录，不用等解压 -->
+    <Content Include="tools\kpatch\**" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Never" />
+    <Content Include="tools\lkm\**" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Never" />
+
+    <!-- scrcpy 约 25 MB（自带 adb + SDL3 + ffmpeg），内嵌会让 exe 直接翻三倍，而它本来就能
+         按需下载（ScrcpyInstaller），所以只是调试时拷进 bin\。要出离线完整包：
+         publish.ps1 -WithScrcpy，把仓库 tools\scrcpy 放到 exe 同级（ToolPaths 优先认同级目录）。 -->
+    <Content Include="tools\scrcpy\**" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Never" />
+
+    <!-- OPPO K10 强制解锁用的资源：两份 ocdt 镜像（解锁用 / 还原用）与 MT6895 分体 DA。
+         和 scrcpy 一样只进调试目录、不进发布目录（exe 不会因此变大）；
+         发布时把 tools\unlock 放到 exe 同级即可，ToolPaths 优先认同级真实目录。 -->
+    <Content Include="tools\unlock\**" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Never" />
+  </ItemGroup>
+
+  <!-- ===================== Penumbra 原生 FFI 层（可选构建） =====================
+       把 Penumbra 的 core 编成 penumbra_ffi.dll，让 Mosytool 直接 P/Invoke，
+       从而去掉 antumbra.exe 子进程和文本解析。
+
+       penumbra 的 core 已收编进仓库 native\penumbra\（见其 Cargo.toml 说明）；
+       FFI crate 位于 native\penumbra-ffi，用 `../penumbra/core` 引用并就地编译，
+       不再依赖任何仓库外的检出路径。
+
+       前置条件缺失（未装 Rust / 无 mingw-w64）时只跳过、不报错：
+       此时 PenumbraNative.IsAvailable 为 false，界面会如实提示原生层不可用。
+       用 /p:SkipPenumbraFfi=true 可以强制跳过。
+  -->
+  <PropertyGroup>
+    <!-- penumbra 源码目录（已收编进仓库），可命令行覆盖：/p:PenumbraSrcDir=D:\src\penumbra -->
+    <PenumbraSrcDir Condition="'$(PenumbraSrcDir)' == ''">$(MSBuildThisFileDirectory)native\penumbra</PenumbraSrcDir>
+    <PenumbraCargo Condition="'$(PenumbraCargo)' == ''">$(USERPROFILE)\.cargo\bin\cargo.exe</PenumbraCargo>
+    <PenumbraRustToolchain Condition="'$(PenumbraRustToolchain)' == ''">nightly-x86_64-pc-windows-gnu</PenumbraRustToolchain>
+    <PenumbraFfiProjectDir>$(MSBuildThisFileDirectory)native\penumbra-ffi</PenumbraFfiProjectDir>
+    <!-- 重要：cargo 的 target 目录必须落在纯 ASCII 路径。
+         mingw 的 ld.exe / gcc 走 ANSI 路径 API，遇到非 ASCII 目录（例如本仓库的
+         `D:\刷机项目\...`）会把它解成乱码，链接阶段报 "cannot find ...lib*.rlib"。
+         因此默认放到 %LOCALAPPDATA%\Mosytool 下，可用 /p:PenumbraFfiOutDir=... 覆盖。 -->
+    <PenumbraFfiOutDir Condition="'$(PenumbraFfiOutDir)' == ''">$(LOCALAPPDATA)\Mosytool\penumbra-ffi-target</PenumbraFfiOutDir>
+    <PenumbraFfiDll>$(PenumbraFfiOutDir)\release\penumbra_ffi.dll</PenumbraFfiDll>
+
+    <!-- 高通 EDL 原生层（sahara + firehose）。同样是本仓库自带的独立 Rust crate，
+         同样必须把 cargo 的 target 放到纯 ASCII 路径（原因见上面 PenumbraFfiOutDir）。 -->
+    <QualcommFfiProjectDir Condition="'$(QualcommFfiProjectDir)' == ''">$(MSBuildThisFileDirectory)native\qualcomm-ffi</QualcommFfiProjectDir>
+    <QualcommFfiOutDir Condition="'$(QualcommFfiOutDir)' == ''">$(LOCALAPPDATA)\Mosytool\qualcomm-ffi-target</QualcommFfiOutDir>
+    <QualcommFfiDll>$(QualcommFfiOutDir)\release\qualcomm_ffi.dll</QualcommFfiDll>
+  </PropertyGroup>
+
+  <!-- 收编进来的 Rust 源码与 cargo 产物不参与 .NET 默认项目项收集（否则会被当成 None/Content 全量扫描）。
+       dist\ 是打包产物、dist-extra\ 是随包附带文件的来源（publish.ps1 负责拷进 dist\），
+       两者都不该被当成项目项扫进来。 -->
+  <PropertyGroup>
+    <DefaultItemExcludes>$(DefaultItemExcludes);native\penumbra\**;native\penumbra-ffi\target\**;native\qualcomm-ffi\target\**;dist\**;dist-extra\**</DefaultItemExcludes>
+  </PropertyGroup>
+
+  <Target Name="BuildPenumbraFfi"
+          BeforeTargets="BeforeBuild"
+          Condition="'$(SkipPenumbraFfi)' != 'true'
+                     AND Exists('$(PenumbraSrcDir)\core\Cargo.toml')
+                     AND Exists('$(PenumbraCargo)')">
+
+    <!-- 就地编译。CARGO_TARGET_DIR 指向本 crate 自己的 target\，与收编的 penumbra 源码互不干扰。
+         wrapper 会把 GNU 工具链的 self-contained（dlltool/ld）加进 PATH -->
+    <Message Importance="high" Text="正在编译 penumbra_ffi.dll ..." />
+    <Exec Command="&quot;$(MSBuildThisFileDirectory)native\build-penumbra-ffi.cmd&quot; &quot;$(PenumbraCargo)&quot; $(PenumbraRustToolchain) &quot;$(PenumbraFfiProjectDir)\Cargo.toml&quot; &quot;$(PenumbraFfiOutDir)&quot;" />
+
+    <!-- 直接落进输出目录的 tools\，不依赖 Content glob（glob 在求值期就展开了，
+          首次构建时这个 dll 还不存在，会被漏掉） -->
+    <Copy SourceFiles="$(PenumbraFfiDll)" DestinationFolder="$(OutDir)tools" SkipUnchangedFiles="true" />
+    <Message Importance="high" Text="penumbra_ffi.dll 已就绪：$(OutDir)tools" />
+  </Target>
+
+  <!-- 高通 EDL 原生层。复用同一个构建包装脚本（build-penumbra-ffi.cmd 已改为多 crate 通用，
+       crate 名不再写死在里面）。 -->
+  <Target Name="BuildQualcommFfi"
+          BeforeTargets="BeforeBuild"
+          Condition="'$(SkipQualcommFfi)' != 'true'
+                     AND Exists('$(QualcommFfiProjectDir)\Cargo.toml')
+                     AND Exists('$(PenumbraCargo)')">
+
+    <Message Importance="high" Text="正在编译 qualcomm_ffi.dll ..." />
+    <Exec Command="&quot;$(MSBuildThisFileDirectory)native\build-penumbra-ffi.cmd&quot; &quot;$(PenumbraCargo)&quot; $(PenumbraRustToolchain) &quot;$(QualcommFfiProjectDir)\Cargo.toml&quot; &quot;$(QualcommFfiOutDir)&quot;" />
+
+    <Copy SourceFiles="$(QualcommFfiDll)" DestinationFolder="$(OutDir)tools" SkipUnchangedFiles="true" />
+    <Message Importance="high" Text="qualcomm_ffi.dll 已就绪：$(OutDir)tools" />
+  </Target>
+
+  <!-- 没有前置条件时给一句提示，免得静默产出一个没有原生层的包 -->
+  <Target Name="WarnPenumbraFfiSkipped" BeforeTargets="BeforeBuild"
+          Condition="'$(SkipPenumbraFfi)' != 'true'
+                     AND (!Exists('$(PenumbraSrcDir)\core\Cargo.toml') OR !Exists('$(PenumbraCargo)'))">
+    <Message Importance="high"
+             Text="跳过 penumbra_ffi：未找到 Rust 工具链（$(PenumbraCargo)）或 penumbra 源码（$(PenumbraSrcDir)）。此构建产出的包不含原生层，MTK 功能将不可用。" />
+  </Target>
+
+  <!-- 发布：把 dll 也带进发布目录 -->
+  <Target Name="PublishPenumbraFfi" AfterTargets="Publish"
+          Condition="Exists('$(PenumbraFfiDll)')">
+    <Copy SourceFiles="$(PenumbraFfiDll)" DestinationFolder="$(PublishDir)tools" SkipUnchangedFiles="true" />
+  </Target>
+
+  <!-- 高通原生层同样要带进发布目录。PublishDir\tools 里的文件不会被 Content glob
+       自动收集，少了这个 target，发布目录里就没有 qualcomm_ffi.dll，EDL 直接不可用。 -->
+  <Target Name="PublishQualcommFfi" AfterTargets="Publish"
+          Condition="Exists('$(QualcommFfiDll)')">
+    <Copy SourceFiles="$(QualcommFfiDll)" DestinationFolder="$(PublishDir)tools" SkipUnchangedFiles="true" />
+  </Target>
+  <!-- 原生层也内嵌（单文件发布时它们不再放在 tools\ 里）。
+       这两个 dll 是构建期才编出来的：ItemGroup 在求值期就展开了，那时文件还不存在，
+       glob / Include 都会漏掉它们，所以必须在目标里、且在资源收集之前追加。
+       Hook 挂在 PrepareForBuild（Compile 之前）上，MSBuild 的每个目标只会跑一次，
+       多个 BeforeTargets 不会重复添加。 -->
+  <Target Name="EmbedNativeTools"
+          BeforeTargets="PrepareForBuild;SplitResourcesByCulture;CreateManifestResourceNames">
+    <ItemGroup>
+      <EmbeddedResource Include="$(PenumbraFfiDll)"
+                        LogicalName="tools/penumbra_ffi.dll"
+                        Type="Non-Resx" WithCulture="false"
+                        Condition="Exists('$(PenumbraFfiDll)')" />
+      <EmbeddedResource Include="$(QualcommFfiDll)"
+                        LogicalName="tools/qualcomm_ffi.dll"
+                        Type="Non-Resx" WithCulture="false"
+                        Condition="Exists('$(QualcommFfiDll)')" />
+    </ItemGroup>
+
+    <Warning Condition="'$(SkipPenumbraFfi)' != 'true' AND !Exists('$(PenumbraFfiDll)')"
+             Text="penumbra_ffi.dll 不存在，本次构建的内嵌工具里没有 MTK 原生层（MTK 功能会不可用）。" />
+    <Warning Condition="'$(SkipQualcommFfi)' != 'true' AND !Exists('$(QualcommFfiDll)')"
+             Text="qualcomm_ffi.dll 不存在，本次构建的内嵌工具里没有 EDL 原生层（EDL 功能会不可用）。" />
+  </Target>
+
+</Project>

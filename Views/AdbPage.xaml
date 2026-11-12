@@ -1,0 +1,359 @@
+<Page x:Class="Mosytool.Views.AdbPage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+      xmlns:ctl="clr-namespace:Mosytool.Controls"
+      ScrollViewer.CanContentScroll="False"
+      Title="ADB 工具">
+
+    <Page.Resources>
+        <!-- 宫格视图的卡片：整块可点，选中态由 ListBoxItem 默认样式给出 -->
+        <Style x:Key="FileTile" TargetType="{x:Type ListBoxItem}">
+            <Setter Property="Margin" Value="0,0,8,8"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type ListBoxItem}">
+                        <Border x:Name="Tile" Width="126" Height="106" Padding="12"
+                                CornerRadius="{StaticResource Mt.Corner.Control}"
+                                Background="{DynamicResource ControlFillColorSecondaryBrush}"
+                                BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
+                                BorderThickness="1">
+                            <ContentPresenter/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Tile" Property="BorderBrush"
+                                        Value="{DynamicResource AccentTextFillColorPrimaryBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="Tile" Property="Background"
+                                        Value="{DynamicResource Mt.Accent.SoftBrush}"/>
+                                <Setter TargetName="Tile" Property="BorderBrush"
+                                        Value="{DynamicResource AccentFillColorDefaultBrush}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Page.Resources>
+
+    <Grid Margin="{StaticResource Mt.PagePadding}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*" MinHeight="320"/>
+        </Grid.RowDefinitions>
+
+        <!-- ==================== 页头：标题 + 功能选择 ==================== -->
+        <Grid Grid.Row="0" Margin="0,0,0,14">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <StackPanel>
+                <TextBlock Style="{StaticResource Mt.PageTitle}" Text="ADB 工具"/>
+                <TextBlock Style="{StaticResource Mt.PageSubtitle}"
+                           Text="设备文件推送与 scrcpy 投屏，右侧日志显示每一步进度。" />
+            </StackPanel>
+
+            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                <TextBlock Style="{StaticResource Mt.Label}" Text="功能" Margin="0,0,8,0"/>
+                <ComboBox x:Name="FeatureCombo" Width="150" SelectedIndex="0"
+                          SelectionChanged="FeatureCombo_SelectionChanged"
+                          Foreground="{DynamicResource TextFillColorPrimaryBrush}">
+                    <ComboBoxItem Content="文件推送"/>
+                    <ComboBoxItem Content="投屏"/>
+                </ComboBox>
+            </StackPanel>
+        </Grid>
+
+        <!-- ==================== 主体：左面板 + 右日志 ==================== -->
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" MinWidth="420"/>
+                <ColumnDefinition Width="16"/>
+                <ColumnDefinition Width="330" MinWidth="270"/>
+            </Grid.ColumnDefinitions>
+
+            <Grid Grid.Column="0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <!-- 设备状态条 -->
+                <Border Grid.Row="0" Style="{StaticResource Mt.Card.Tight}" Margin="0,0,0,14">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <ui:SymbolIcon Grid.Column="0" Symbol="PhoneLaptop24"
+                                       Style="{StaticResource Mt.SectionIcon}"/>
+
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                            <StackPanel Orientation="Horizontal">
+                                <Border x:Name="StateDot" Style="{StaticResource Mt.StatusDot}"/>
+                                <TextBlock x:Name="StateText" Text="未检测"
+                                           Style="{StaticResource Mt.Label}" Margin="7,0,0,0"/>
+                                <TextBlock x:Name="SerialText" Text="-" Margin="14,0,0,0"
+                                           Style="{StaticResource Mt.Caption}"
+                                           VerticalAlignment="Center"/>
+                            </StackPanel>
+                            <TextBlock x:Name="ModelText" Text="-" Margin="0,4,0,0"
+                                       Style="{StaticResource Mt.Caption}"/>
+                            <TextBlock x:Name="DeviceHintText" Margin="0,4,0,0" Visibility="Collapsed"
+                                       Style="{StaticResource Mt.Caption}"/>
+                        </StackPanel>
+
+                        <ui:Button Grid.Column="2" x:Name="DetectButton" Appearance="Secondary"
+                                   VerticalAlignment="Center" Padding="12,4"
+                                   Icon="{ui:SymbolIcon ArrowSync24}" Content="刷新检测"
+                                   Click="DetectButton_Click"/>
+                    </Grid>
+                </Border>
+
+                <!-- ==================== 文件推送 ==================== -->
+                <Border Grid.Row="1" x:Name="FilePanel" Style="{StaticResource Mt.Card}">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <Grid Grid.Row="0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel Orientation="Horizontal">
+                                <ui:SymbolIcon Symbol="Folder24" Style="{StaticResource Mt.SectionIcon}"/>
+                                <TextBlock Text="文件推送" Style="{StaticResource Mt.SectionTitle}"/>
+                                <Border Style="{StaticResource Mt.Pill.Accent}" Margin="10,0,0,0">
+                                    <TextBlock x:Name="FileCountText" Style="{StaticResource Mt.Pill.Text}"
+                                               Text="正在读取…"/>
+                                </Border>
+                            </StackPanel>
+
+                            <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                <ui:Button x:Name="GoUpButton" Appearance="Secondary" Padding="10,4"
+                                           Content="上一级" Click="GoUp_Click"/>
+                                <ui:Button x:Name="RefreshFilesButton" Appearance="Secondary" Padding="10,4"
+                                           Margin="8,0,0,0" Content="刷新" Click="RefreshFiles_Click"/>
+                            </StackPanel>
+                        </Grid>
+
+                        <Grid Grid.Row="1" Margin="0,14,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="64"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Style="{StaticResource Mt.Label}" Text="当前目录"/>
+                            <ui:TextBox x:Name="RemoteDirBox" Grid.Column="1" Text="/sdcard/Download/"
+                                        PlaceholderText="设备内路径，以 / 开头"
+                                        KeyDown="RemoteDirBox_KeyDown"/>
+                            <ui:Button Grid.Column="2" Appearance="Secondary" Margin="8,0,0,0" Padding="10,4"
+                                       Content="打开" Click="OpenDir_Click"/>
+                        </Grid>
+
+                        <!-- 列表 / 宫格：两个视图共用同一份数据，切换只改可见性 -->
+                        <Grid Grid.Row="2" Margin="0,12,0,0">
+                            <DataGrid x:Name="FileGrid" AutoGenerateColumns="False" IsReadOnly="True"
+                                      CanUserAddRows="False" CanUserDeleteRows="False"
+                                      CanUserResizeRows="False" RowHeight="30"
+                                      SelectionMode="Extended" SelectionUnit="FullRow"
+                                      HeadersVisibility="Column" BorderThickness="0"
+                                      Background="Transparent" GridLinesVisibility="Horizontal"
+                                      FontSize="12.5" SelectionChanged="FileSelection_Changed"
+                                      MouseDoubleClick="FileGrid_MouseDoubleClick">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="名称" Binding="{Binding Name}"      Width="*"/>
+                                    <DataGridTextColumn Header="类型" Binding="{Binding KindLabel}" Width="0.55*"/>
+                                    <DataGridTextColumn Header="大小" Binding="{Binding SizeHuman}" Width="0.7*"/>
+                                    <DataGridTextColumn Header="状态" Binding="{Binding Status}"    Width="0.9*"/>
+                                </DataGrid.Columns>
+                            </DataGrid>
+
+                            <ListBox x:Name="FileTiles" Visibility="Collapsed" SelectionMode="Extended"
+                                     ItemContainerStyle="{StaticResource FileTile}"
+                                     Background="Transparent" BorderThickness="0" Padding="0"
+                                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                     SelectionChanged="FileSelection_Changed"
+                                     MouseDoubleClick="FileTiles_MouseDoubleClick">
+                                <ListBox.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <WrapPanel/>
+                                    </ItemsPanelTemplate>
+                                </ListBox.ItemsPanel>
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <StackPanel>
+                                            <ui:SymbolIcon Symbol="{Binding Icon}" FontSize="22"
+                                                           Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}"/>
+                                            <TextBlock Text="{Binding Name}" Style="{StaticResource Mt.Body}"
+                                                       Margin="0,8,0,0"/>
+                                            <TextBlock Text="{Binding SizeHuman}"
+                                                       Style="{StaticResource Mt.Caption}"/>
+                                            <TextBlock Text="{Binding Status}"
+                                                       Style="{StaticResource Mt.Caption}"/>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                        </Grid>
+
+                        <TextBlock Grid.Row="3" x:Name="FileStateText" Margin="0,10,0,0"
+                                   Style="{StaticResource Mt.Caption}"
+                                   Text="进入页面会自动读取当前连接设备的文件；双击文件夹可进入。"/>
+
+                        <StackPanel Grid.Row="4" Orientation="Horizontal" Margin="0,14,0,0">
+                            <ui:Button x:Name="ExportButton" Appearance="Primary"
+                                       Icon="{ui:SymbolIcon ArrowDownload24}" Content="导出文件"
+                                       Click="Export_Click"/>
+                            <ui:Button x:Name="PushFilesButton" Appearance="Secondary" Margin="8,0,0,0"
+                                       Icon="{ui:SymbolIcon ArrowUpload24}" Content="推送文件"
+                                       Click="PushFiles_Click"/>
+                            <ui:Button x:Name="ViewToggleButton" Appearance="Secondary" Margin="8,0,0,0"
+                                       Content="切换宫格显示" Click="ToggleView_Click"/>
+                            <ui:Button x:Name="CancelTransferButton" Appearance="Secondary" Margin="8,0,0,0"
+                                       Content="取消" Visibility="Collapsed" Click="CancelTransfer_Click"/>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+
+                <!-- ==================== 投屏 ==================== -->
+                <Border Grid.Row="1" x:Name="MirrorPanel" Style="{StaticResource Mt.Card}"
+                        Visibility="Collapsed">
+                    <StackPanel>
+                        <StackPanel Orientation="Horizontal">
+                            <ui:SymbolIcon Symbol="Video24" Style="{StaticResource Mt.SectionIcon}"/>
+                            <TextBlock Text="投屏" Style="{StaticResource Mt.SectionTitle}"/>
+                        </StackPanel>
+
+                        <Grid Margin="0,16,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="72"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Style="{StaticResource Mt.Label}" Text="设备状态"/>
+                            <TextBlock x:Name="MirrorStateText" Grid.Column="1" Text="-"
+                                       Style="{StaticResource Mt.Body}"/>
+                        </Grid>
+
+                        <Grid Margin="0,10,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="72"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Style="{StaticResource Mt.Label}" Text="设备名称"/>
+                            <TextBlock x:Name="MirrorModelText" Grid.Column="1" Text="-"
+                                       Style="{StaticResource Mt.Body}"/>
+                        </Grid>
+
+                        <Border Style="{StaticResource Mt.Divider}" Margin="0,16,0,0"/>
+
+                        <Grid Margin="0,14,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="72"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="16"/>
+                                <ColumnDefinition Width="72"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Style="{StaticResource Mt.Label}" Text="分辨率"/>
+                            <ComboBox x:Name="SizeCombo" Grid.Column="1"
+                                      Foreground="{DynamicResource TextFillColorPrimaryBrush}"/>
+                            <TextBlock Grid.Column="3" Style="{StaticResource Mt.Label}" Text="码率"/>
+                            <ComboBox x:Name="BitRateCombo" Grid.Column="4"
+                                      Foreground="{DynamicResource TextFillColorPrimaryBrush}"/>
+                        </Grid>
+
+                        <Grid Margin="0,12,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="72"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="16"/>
+                                <ColumnDefinition Width="72"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Style="{StaticResource Mt.Label}" Text="帧率"/>
+                            <ComboBox x:Name="FpsCombo" Grid.Column="1"
+                                      Foreground="{DynamicResource TextFillColorPrimaryBrush}"/>
+                            <TextBlock Grid.Column="3" Style="{StaticResource Mt.Label}" Text="录制屏幕"/>
+                            <ui:TextBox x:Name="RecordBox" Grid.Column="4" IsReadOnly="True"
+                                        PlaceholderText="留空则不录制"/>
+                            <ui:Button Grid.Column="5" Appearance="Secondary" Margin="8,0,0,0" Padding="10,4"
+                                       Content="选择…" Click="BrowseRecord_Click"/>
+                        </Grid>
+
+                        <WrapPanel Margin="0,16,0,0">
+                            <CheckBox x:Name="NoAudioCheck" Content="不转发音频" IsChecked="True"
+                                      Margin="0,0,20,8"
+                                      Foreground="{DynamicResource TextFillColorPrimaryBrush}"/>
+                            <CheckBox x:Name="StayAwakeCheck" Content="保活" IsChecked="True"
+                                      Margin="0,0,20,8"
+                                      ToolTip="投屏期间让手机保持唤醒，不会自动熄屏。"
+                                      Foreground="{DynamicResource TextFillColorPrimaryBrush}"/>
+                            <CheckBox x:Name="ScreenOffCheck" Content="关闭屏幕" Margin="0,0,20,8"
+                                      ToolTip="投屏时关掉手机自己的屏幕，省电也避免误触。"
+                                      Foreground="{DynamicResource TextFillColorPrimaryBrush}"/>
+                            <CheckBox x:Name="FullscreenCheck" Content="全屏启动" Margin="0,0,20,8"
+                                      Foreground="{DynamicResource TextFillColorPrimaryBrush}"/>
+                        </WrapPanel>
+
+                        <StackPanel Orientation="Horizontal" Margin="0,20,0,0">
+                            <ui:Button x:Name="StartMirrorButton" Appearance="Primary"
+                                       Icon="{ui:SymbolIcon Video24}" Content="开始投屏"
+                                       Click="StartMirror_Click"/>
+                            <ui:Button x:Name="StopMirrorButton" Appearance="Secondary" Margin="12,0,0,0"
+                                       Content="结束投屏" IsEnabled="False" Click="StopMirror_Click"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+            </Grid>
+
+            <!-- ==================== 日志（常驻右栏） ==================== -->
+            <Border Grid.Column="2" Style="{StaticResource Mt.Card}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <Grid Grid.Row="0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Orientation="Horizontal">
+                            <ui:SymbolIcon Symbol="DocumentText24" Style="{StaticResource Mt.SectionIcon}"/>
+                            <TextBlock Text="日志" Style="{StaticResource Mt.SectionTitle}"/>
+                        </StackPanel>
+                        <ui:Button Grid.Column="1" Appearance="Secondary" Padding="10,4" Content="清空"
+                                   Click="ClearLog_Click"/>
+                    </Grid>
+
+                    <ProgressBar x:Name="TransferProgress" Grid.Row="1" Height="4" Margin="0,12,0,0"
+                                 Minimum="0" Maximum="100" Value="0" Visibility="Collapsed"/>
+
+                    <ctl:LogView Grid.Row="2" x:Name="OutputBox" Margin="0,12,0,0" NoWrap="True"
+                                 MaxChars="200000" FontFamily="Consolas" FontSize="12"
+                                 Background="{DynamicResource Mt.InsetFillBrush}" BorderThickness="0"
+                                 Padding="10" Foreground="{DynamicResource TextFillColorPrimaryBrush}"/>
+                </Grid>
+            </Border>
+        </Grid>
+    </Grid>
+</Page>

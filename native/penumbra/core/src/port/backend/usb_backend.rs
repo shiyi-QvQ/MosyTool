@@ -1,0 +1,475 @@
+/*
+    SPDX-License-Identifier: AGPL-3.0-or-later
+    SPDX-FileCopyrightText: 2025-2026 Shomy
+*/
+
+use std::collections::VecDeque;
+use std::fmt;
+use std::io::{Read, Write};
+use std::time::{Duration, Instant};
+
+use log::debug;
+use nusb::descriptors::TransferType;
+use nusb::io::{EndpointRead, EndpointWrite};
+use nusb::transfer::{Bulk, ControlIn, ControlOut, ControlType, Direction, In, Out, Recipient};
+use nusb::{Device, DeviceInfo, Interface, MaybeFuture};
+
+use crate::error::{ConnectionError, Error, Result};
+use crate::port::{
+    ConnectionType,
+    KNOWN_PORTS,
+    MAX_TIMEOUT,
+    MIN_TIMEOUT,
+    MtkPort,
+    PORT_OPEN_TIMEOUT,
+    PORT_RETRY_INTERVAL,
+};
+
+const BULK_IN_SZ: usize = 0x80000;
+const BULK_OUT_SZ: usize = 0x80000;
+
+pub struct UsbMTKPort {
+    info: DeviceInfo,
+    interface: Option<Interface>,
+    ctrl_interface: Option<Interface>,
+    reader: Option<EndpointRead<Bulk>>,
+    writer: Option<EndpointWrite<Bulk>>,
+    ep_out: u8,
+    ep_in: u8,
+    in_max_packet_size: usize,
+    out_max_packet_size: usize,
+    conn_type: ConnectionType,
+    is_open: bool,
+    timeout: Duration,
+    /// 超时前已经读到的字节先缓存在这里。
+    ///
+    /// `EndpointRead::read_exact` 一旦中途超时，会把已经拷进调用方 buf 的那半截数据
+    /// 直接丢掉。包头只有 12 字节、数据包却可能很大，只要在这里丢半个包，后续解析
+    /// 就会整体错位，表现为「读不到分区」「动不动就超时」。libusb 后端一直有这层保护，
+    /// 这里补齐。
+    read_buf: VecDeque<u8>,
+}
+
+impl fmt::Debug for UsbMTKPort {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "UsbMTKPort {{ info: {:?}, is_open: {} }}", self.info, self.is_open)
+    }
+}
+
+impl UsbMTKPort {
+    pub const fn new(info: DeviceInfo, conn_type: ConnectionType) -> Self {
+        Self {
+            info,
+            interface: None,
+            ctrl_interface: None,
+            writer: None,
+            reader: None,
+            ep_out: 0,
+            ep_in: 0,
+            in_max_packet_size: 0,
+            out_max_packet_size: 0,
+            conn_type,
+            is_open: false,
+            timeout: MIN_TIMEOUT,
+            read_buf: VecDeque::new(),
+        }
+    }
+
+    fn select_endpoints(&mut self, iface: &Interface) -> Result<()> {
+        for alt in iface.descriptors() {
+            let mut in_ep = None;
+            let mut out_ep = None;
+
+            for ep in alt.endpoints() {
+                if !matches!(ep.transfer_type(), TransferType::Bulk) {
+                    continue;
+                }
+
+                match ep.direction() {
+                    Direction::In => {
+                        in_ep = Some(ep.address());
+                        self.in_max_packet_size = ep.max_packet_size();
+                    }
+                    Direction::Out => {
+                        out_ep = Some(ep.address());
+                        self.out_max_packet_size = ep.max_packet_size();
+                    }
+                }
+            }
+
+            if let (Some(i), Some(o)) = (in_ep, out_ep) {
+                self.ep_in = i;
+                self.ep_out = o;
+                return Ok(());
+            }
+        }
+
+        Err(Error::Connection(ConnectionError::InterfaceNotFound))
+    }
+
+    fn setup_cdc(&self) -> Result<()> {
+        let iface = self.ctrl_interface.as_ref().ok_or(ConnectionError::PortNotOpen)?;
+
+        const CDC_INTERFACE_NUM: u16 = 0;
+        const SET_LINE_CODING: u8 = 0x20;
+        const SET_CONTROL_LINE_STATE: u8 = 0x22;
+        const LINE_CODING: [u8; 7] = [0x00, 0x00, 0x0E, 0x00, 0x00, 0x00, 0x08];
+        const CONTROL_LINE_STATE: u16 = 0x03; // DTR | RTS
+
+        iface
+            .control_out(
+                ControlOut {
+                    control_type: ControlType::Class,
+                    recipient: Recipient::Interface,
+                    request: SET_LINE_CODING,
+                    value: 0,
+                    index: CDC_INTERFACE_NUM,
+                    data: &LINE_CODING,
+                },
+                MIN_TIMEOUT,
+            )
+            .wait()
+            .map_err(|_| ConnectionError::CdcSetupFailed)?;
+
+        iface
+            .control_out(
+                ControlOut {
+                    control_type: ControlType::Class,
+                    recipient: Recipient::Interface,
+                    request: SET_CONTROL_LINE_STATE,
+                    value: CONTROL_LINE_STATE,
+                    index: CDC_INTERFACE_NUM,
+                    data: &[],
+                },
+                MIN_TIMEOUT,
+            )
+            .wait()
+            .map_err(|_| ConnectionError::CdcSetupFailed)?;
+
+        debug!("CDC Setup complete");
+        Ok(())
+    }
+
+    /*
+     * Some devices don't have the bulk iface on 1, but on 0, so we gotta adapt!!
+     */
+    fn find_cdc_interface_numbers(device: &Device) -> Result<(u8, u8)> {
+        let settings: Vec<(u8, u8)> = device
+            .configurations()
+            .flat_map(|c| c.interfaces())
+            .flat_map(|i| {
+                i.alt_settings().map(|a| (a.class(), a.interface_number())).collect::<Vec<_>>()
+            })
+            .collect();
+
+        let ctrl_num = settings.iter().find(|(class, _)| *class == 2).map(|(_, n)| *n);
+        let bulk_num = settings.iter().find(|(class, _)| *class == 10).map(|(_, n)| *n);
+
+        match (ctrl_num, bulk_num) {
+            (Some(c), Some(b)) => Ok((c, b)),
+            _ => Err(Error::Connection(ConnectionError::InterfaceNotFound)),
+        }
+    }
+}
+
+impl MtkPort for UsbMTKPort {
+    fn open(&mut self) -> Result<()> {
+        if self.is_open {
+            return Ok(());
+        }
+
+        let device = {
+            let start = Instant::now();
+
+            loop {
+                match self.info.open().wait() {
+                    Ok(handle) => break handle,
+                    Err(e) => {
+                        if e.kind() != nusb::ErrorKind::PermissionDenied
+                            || start.elapsed() >= PORT_OPEN_TIMEOUT
+                        {
+                            return Err(ConnectionError::OpenFailed(e.to_string()).into());
+                        }
+
+                        std::thread::sleep(PORT_RETRY_INTERVAL);
+                    }
+                }
+            }
+        };
+
+        let (ctrl_num, bulk_num) = Self::find_cdc_interface_numbers(&device)?;
+
+        self.ctrl_interface = Some(device.detach_and_claim_interface(ctrl_num).wait()?);
+        let bulk_iface = device.detach_and_claim_interface(bulk_num).wait()?;
+
+        self.select_endpoints(&bulk_iface)?;
+        let tr = if cfg!(windows) { 1 } else { 8 };
+
+        self.reader = Some(
+            bulk_iface
+                .endpoint::<Bulk, In>(self.ep_in)?
+                .reader(BULK_IN_SZ)
+                .with_num_transfers(tr)
+                .with_read_timeout(MIN_TIMEOUT),
+        );
+
+        self.writer = Some(
+            bulk_iface
+                .endpoint::<Bulk, Out>(self.ep_out)?
+                .writer(BULK_OUT_SZ)
+                .with_num_transfers(tr)
+                .with_write_timeout(MIN_TIMEOUT),
+        );
+
+        self.interface = Some(bulk_iface);
+
+        if self.conn_type != ConnectionType::Brom
+            && let Err(e) = self.setup_cdc()
+        {
+            debug!("CDC Setup failed (may be ok): {:?}", e);
+        }
+
+        self.is_open = true;
+        Ok(())
+    }
+
+    fn close(&mut self) -> Result<()> {
+        if !self.is_open {
+            return Ok(());
+        }
+
+        // NUSB automatically releases interfaces on drop
+        self.reader = None;
+        self.writer = None;
+        self.interface = None;
+        self.is_open = false;
+        self.read_buf.clear();
+
+        Ok(())
+    }
+
+    fn reenumerate(&mut self, vid: u16, pid: u16) -> Result<()> {
+        self.close()?;
+
+        let start = std::time::Instant::now();
+        let poll_interval = Duration::from_millis(200);
+
+        let mut new_device_info = None;
+
+        while start.elapsed() < MAX_TIMEOUT {
+            if let Ok(devices) = nusb::list_devices().wait()
+                && let Some(dev) =
+                    devices.into_iter().find(|d| d.vendor_id() == vid && d.product_id() == pid)
+            {
+                new_device_info = Some(dev);
+                break;
+            }
+
+            std::thread::sleep(poll_interval);
+        }
+
+        let info = new_device_info.ok_or(ConnectionError::Timeout)?;
+
+        self.info = info;
+        self.open()?;
+
+        Ok(())
+    }
+
+    fn read_exact(&mut self, buf: &mut [u8]) -> Result<usize> {
+        let mut total_read = 0;
+
+        // 先把上一次超时残留的字节补上。
+        if !self.read_buf.is_empty() {
+            let to_take = buf.len().min(self.read_buf.len());
+            for slot in buf.iter_mut().take(to_take) {
+                *slot = self.read_buf.pop_front().unwrap();
+            }
+            total_read = to_take;
+        }
+
+        // 用固定大小的栈缓冲分块读，任何一次中途超时都能把已收到的字节保住，
+        // 不会再出现「丢了半个包 → 后续解析整体错位」。
+        let mut temp = [0u8; 4096];
+
+        while total_read < buf.len() {
+            let reader = self.reader.as_mut().ok_or(ConnectionError::PortNotOpen)?;
+
+            let needed = buf.len() - total_read;
+            let chunk_len = needed.min(temp.len());
+
+            let n = match reader.read(&mut temp[..chunk_len]) {
+                // 没有数据可读（端点已关闭或收到空包）。当成超时处理，避免在此处空转。
+                Ok(0) => return Err(Error::Timeout),
+                Ok(n) => n,
+                Err(e) if e.kind() == std::io::ErrorKind::TimedOut => {
+                    // 已经拷进 buf 的那部分先塞回缓冲，下次调用接着用，绝不能丢。
+                    for byte in buf[..total_read].iter().rev() {
+                        self.read_buf.push_front(*byte);
+                    }
+                    // Error::Timeout, not ConnectionError::Timeout: the libusb and serial
+                    // backends already report I/O timeouts that way, and code that has to
+                    // tell a timeout apart from a real failure only matches the one
+                    // variant. ConnectionError::Timeout stays for enumeration timeouts.
+                    return Err(Error::Timeout);
+                }
+                Err(e) => return Err(Error::from(e)),
+            };
+
+            buf[total_read..total_read + n].copy_from_slice(&temp[..n]);
+            total_read += n;
+        }
+
+        Ok(total_read)
+    }
+
+    fn write_all(&mut self, buf: &[u8]) -> Result<()> {
+        let writer = self.writer.as_mut().ok_or(ConnectionError::PortNotOpen)?;
+
+        match writer.write_all(buf) {
+            Ok(()) => {}
+            Err(e) if e.kind() == std::io::ErrorKind::TimedOut => return Err(Error::Timeout),
+            Err(e) => return Err(Error::from(e)),
+        }
+
+        match writer.flush() {
+            Ok(()) => Ok(()),
+            Err(e) if e.kind() == std::io::ErrorKind::TimedOut => Err(Error::Timeout),
+            Err(e) => Err(Error::from(e)),
+        }
+    }
+
+    /// USB doesn't need flushing
+    fn flush(&mut self) -> Result<()> {
+        Ok(())
+    }
+
+    fn get_baudrate(&self) -> u32 {
+        0
+    }
+
+    fn get_port_name(&self) -> String {
+        format!("USB {:04X}:{:04X}", self.info.vendor_id(), self.info.product_id())
+    }
+
+    fn set_timeout(&mut self, timeout: Duration) -> Result<()> {
+        let writer = self.writer.as_mut().ok_or(ConnectionError::PortNotOpen)?;
+        let reader = self.reader.as_mut().ok_or(ConnectionError::PortNotOpen)?;
+
+        reader.set_read_timeout(timeout);
+        writer.set_write_timeout(timeout);
+
+        self.timeout = timeout;
+
+        Ok(())
+    }
+
+    fn get_timeout(&self) -> Duration {
+        self.timeout
+    }
+
+    fn connection_type(&self) -> ConnectionType {
+        self.conn_type
+    }
+
+    fn set_connection_type(&mut self, connection_type: ConnectionType) -> Result<()> {
+        self.conn_type = connection_type;
+        Ok(())
+    }
+
+    fn ctrl_out(
+        &mut self,
+        request_type: u8,
+        request: u8,
+        value: u16,
+        index: u16,
+        data: &[u8],
+    ) -> Result<()> {
+        let iface = self.ctrl_interface.as_ref().ok_or(ConnectionError::PortNotOpen)?;
+
+        let control_type = match (request_type >> 5) & 0b11 {
+            0 => ControlType::Standard,
+            1 => ControlType::Class,
+            2 => ControlType::Vendor,
+            _ => ControlType::Standard,
+        };
+
+        let recipient = match request_type & 0b11111 {
+            0 => Recipient::Device,
+            1 => Recipient::Interface,
+            2 => Recipient::Endpoint,
+            _ => Recipient::Other,
+        };
+
+        iface
+            .control_out(
+                ControlOut { control_type, recipient, request, value, index, data },
+                Duration::from_secs(1),
+            )
+            .wait()
+            .map_err(|_| ConnectionError::CtrlTransferOutFailed)?;
+
+        Ok(())
+    }
+
+    fn ctrl_in(
+        &mut self,
+        request_type: u8,
+        request: u8,
+        value: u16,
+        index: u16,
+        len: usize,
+    ) -> Result<Vec<u8>> {
+        let iface = self.ctrl_interface.as_ref().ok_or(ConnectionError::PortNotOpen)?;
+
+        let control_type = match (request_type >> 5) & 0b11 {
+            0 => ControlType::Standard,
+            1 => ControlType::Class,
+            2 => ControlType::Vendor,
+            _ => ControlType::Standard,
+        };
+
+        let recipient = match request_type & 0b11111 {
+            0 => Recipient::Device,
+            1 => Recipient::Interface,
+            2 => Recipient::Endpoint,
+            _ => Recipient::Other,
+        };
+
+        let buf = iface
+            .control_in(
+                ControlIn { control_type, recipient, request, value, index, length: len as u16 },
+                Duration::from_secs(1),
+            )
+            .wait()
+            .map_err(|_| ConnectionError::CtrlTransferInFailed)?;
+
+        Ok(buf)
+    }
+}
+
+impl UsbMTKPort {
+    pub fn find_device(vid: Option<u16>, pid: Option<u16>) -> Result<Option<Self>> {
+        let devices = nusb::list_devices().wait()?;
+
+        for device in devices {
+            let dev_vid = device.vendor_id();
+            let dev_pid = device.product_id();
+
+            if vid.is_none_or(|v| v == dev_vid)
+                && pid.is_none_or(|p| p == dev_pid)
+                && (vid.is_some() || pid.is_some())
+            {
+                return Ok(Some(Self::new(device, ConnectionType::Preloader)));
+            }
+
+            if let Some((_, _, conn)) =
+                KNOWN_PORTS.iter().find(|(k_vid, k_pid, _)| dev_vid == *k_vid && dev_pid == *k_pid)
+            {
+                return Ok(Some(Self::new(device, conn.to_owned())));
+            }
+        }
+
+        Ok(None)
+    }
+}

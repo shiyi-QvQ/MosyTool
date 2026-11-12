@@ -1,0 +1,14 @@
+# 构建输出
+bin/
+obj/
+dist/
+
+# IDE / 本地缓存
+.vs/
+.codebuddy/
+
+# 本地备份与发布压缩包
+*.zip
+
+# Rust 构建产物
+native/**/target/
