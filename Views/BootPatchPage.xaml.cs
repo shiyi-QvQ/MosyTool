@@ -188,7 +188,7 @@ public partial class BootPatchPage : Page
 
             if (kmi is null)
             {
-                MessageBox.Show("没读到设备内核版本。\n请确认手机已连接且开启 USB 调试，或在下方手动选择 KMI。",
+                Dialogs.Show("没读到设备内核版本。\n请确认手机已连接且开启 USB 调试，或在下方手动选择 KMI。",
                                 "提示", MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
             }
@@ -199,7 +199,7 @@ public partial class BootPatchPage : Page
             }
             else
             {
-                MessageBox.Show($"设备内核是 {kmi}，但 {SelectedFamily} 没有这个 KMI 的模块。\n"
+                Dialogs.Show($"设备内核是 {kmi}，但 {SelectedFamily} 没有这个 KMI 的模块。\n"
                               + "请换一个管理器，或在「LKM KMI」里改选。",
                                 "提示", MessageBoxButton.OK, MessageBoxImage.Warning);
             }
@@ -327,7 +327,7 @@ public partial class BootPatchPage : Page
 
         if (string.IsNullOrWhiteSpace(bootImage) || !File.Exists(bootImage))
         {
-            MessageBox.Show("请先选择有效的 boot / init_boot 镜像。", "提示", MessageBoxButton.OK, MessageBoxImage.Warning);
+            Dialogs.Show("请先选择有效的 boot / init_boot 镜像。", "提示", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
 
@@ -352,13 +352,13 @@ public partial class BootPatchPage : Page
         }
         else if (string.IsNullOrWhiteSpace(magiskApk) || !File.Exists(magiskApk))
         {
-            MessageBox.Show("请先选择有效的安装包（Magisk 或 KernelSU 系 APK）。", "提示", MessageBoxButton.OK, MessageBoxImage.Warning);
+            Dialogs.Show("请先选择有效的安装包（Magisk 或 KernelSU 系 APK）。", "提示", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
 
         if (string.IsNullOrWhiteSpace(outDir))
         {
-            MessageBox.Show("请先选择输出目录。", "提示", MessageBoxButton.OK, MessageBoxImage.Warning);
+            Dialogs.Show("请先选择输出目录。", "提示", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
 
@@ -399,7 +399,7 @@ public partial class BootPatchPage : Page
             if (result.Success)
             {
                 Log($"修补成功：{result.OutputImage}");
-                MessageBox.Show($"修补完成。\n\n输出文件：\n{result.OutputImage}\n\n把它刷入 {partition} 分区即可。",
+                Dialogs.Show($"修补完成。\n\n输出文件：\n{result.OutputImage}\n\n把它刷入 {partition} 分区即可。",
                                 "完成", MessageBoxButton.OK, MessageBoxImage.Information);
             }
             else
@@ -410,7 +410,7 @@ public partial class BootPatchPage : Page
         catch (Exception ex)
         {
             Log($"修补异常：{ex.Message}");
-            MessageBox.Show("修补异常：" + ex.Message, "错误", MessageBoxButton.OK, MessageBoxImage.Error);
+            Dialogs.Show("修补异常：" + ex.Message, "错误", MessageBoxButton.OK, MessageBoxImage.Error);
         }
         finally
         {
@@ -430,19 +430,19 @@ public partial class BootPatchPage : Page
 
         if (string.IsNullOrWhiteSpace(bootImage) || !File.Exists(bootImage))
         {
-            MessageBox.Show("请先选择有效的 boot 镜像。", "提示", MessageBoxButton.OK, MessageBoxImage.Warning);
+            Dialogs.Show("请先选择有效的 boot 镜像。", "提示", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
 
         if (string.IsNullOrWhiteSpace(ak3Zip) || !File.Exists(ak3Zip))
         {
-            MessageBox.Show("请先选择有效的 AnyKernel3 压缩包。", "提示", MessageBoxButton.OK, MessageBoxImage.Warning);
+            Dialogs.Show("请先选择有效的 AnyKernel3 压缩包。", "提示", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
 
         if (string.IsNullOrWhiteSpace(outDir))
         {
-            MessageBox.Show("请先选择输出目录。", "提示", MessageBoxButton.OK, MessageBoxImage.Warning);
+            Dialogs.Show("请先选择输出目录。", "提示", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
 
@@ -467,7 +467,7 @@ public partial class BootPatchPage : Page
             if (result.Success)
             {
                 Log($"制作完成：{result.OutputImage}");
-                MessageBox.Show($"已生成 GKI 镜像。\n\n输出文件：\n{result.OutputImage}",
+                Dialogs.Show($"已生成 GKI 镜像。\n\n输出文件：\n{result.OutputImage}",
                                 "完成", MessageBoxButton.OK, MessageBoxImage.Information);
             }
             else
@@ -478,7 +478,7 @@ public partial class BootPatchPage : Page
         catch (Exception ex)
         {
             Log($"制作异常：{ex.Message}");
-            MessageBox.Show("制作异常：" + ex.Message, "错误", MessageBoxButton.OK, MessageBoxImage.Error);
+            Dialogs.Show("制作异常：" + ex.Message, "错误", MessageBoxButton.OK, MessageBoxImage.Error);
         }
         finally
         {

@@ -7,6 +7,10 @@ dist/
 .vs/
 .codebuddy/
 
+# 运行时日志
+debug.log
+*.log
+
 # 本地备份与发布压缩包
 *.zip
 

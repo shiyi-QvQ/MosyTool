@@ -1,4 +1,5 @@
-<Page x:Class="Mosytool.Views.AdbPage"
+<Page
+      xmlns:controls="clr-namespace:Mosytool.Controls" x:Class="Mosytool.Views.AdbPage"
       xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
       xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
@@ -15,13 +16,13 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="{x:Type ListBoxItem}">
-                        <Border x:Name="Tile" Width="126" Height="106" Padding="12"
+                        <controls:SquircleBorder x:Name="Tile" Width="126" Height="106" Padding="12"
                                 CornerRadius="{StaticResource Mt.Corner.Control}"
                                 Background="{DynamicResource ControlFillColorSecondaryBrush}"
                                 BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
                                 BorderThickness="1">
                             <ContentPresenter/>
-                        </Border>
+                        </controls:SquircleBorder>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter TargetName="Tile" Property="BorderBrush"
@@ -73,7 +74,8 @@
         <!-- ==================== 主体：左面板 + 右日志 ==================== -->
         <Grid Grid.Row="1">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" MinWidth="420"/>
+                <!-- 侧边栏展开 + 最小窗口时内容区只有 ~750px，左栏下限放到 380 才能和右侧日志并存 -->
+                <ColumnDefinition Width="*" MinWidth="380"/>
                 <ColumnDefinition Width="16"/>
                 <ColumnDefinition Width="330" MinWidth="270"/>
             </Grid.ColumnDefinitions>
@@ -85,7 +87,7 @@
                 </Grid.RowDefinitions>
 
                 <!-- 设备状态条 -->
-                <Border Grid.Row="0" Style="{StaticResource Mt.Card.Tight}" Margin="0,0,0,14">
+                <controls:SquircleBorder Grid.Row="0" Style="{StaticResource Mt.Card.Tight}" Margin="0,0,0,14">
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto"/>
@@ -116,10 +118,10 @@
                                    Icon="{ui:SymbolIcon ArrowSync24}" Content="刷新检测"
                                    Click="DetectButton_Click"/>
                     </Grid>
-                </Border>
+                </controls:SquircleBorder>
 
                 <!-- ==================== 文件推送 ==================== -->
-                <Border Grid.Row="1" x:Name="FilePanel" Style="{StaticResource Mt.Card}">
+                <controls:SquircleBorder Grid.Row="1" x:Name="FilePanel" Style="{StaticResource Mt.Card}">
                     <Grid>
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
@@ -138,10 +140,10 @@
                             <StackPanel Orientation="Horizontal">
                                 <ui:SymbolIcon Symbol="Folder24" Style="{StaticResource Mt.SectionIcon}"/>
                                 <TextBlock Text="文件推送" Style="{StaticResource Mt.SectionTitle}"/>
-                                <Border Style="{StaticResource Mt.Pill.Accent}" Margin="10,0,0,0">
+                                <controls:SquircleBorder Style="{StaticResource Mt.Pill.Accent}" Margin="10,0,0,0">
                                     <TextBlock x:Name="FileCountText" Style="{StaticResource Mt.Pill.Text}"
                                                Text="正在读取…"/>
-                                </Border>
+                                </controls:SquircleBorder>
                             </StackPanel>
 
                             <StackPanel Grid.Column="1" Orientation="Horizontal">
@@ -216,24 +218,28 @@
                                    Style="{StaticResource Mt.Caption}"
                                    Text="进入页面会自动读取当前连接设备的文件；双击文件夹可进入。"/>
 
-                        <StackPanel Grid.Row="4" Orientation="Horizontal" Margin="0,14,0,0">
-                            <ui:Button x:Name="ExportButton" Appearance="Primary"
+                        <!-- 窄窗口下按钮换行，避免被卡片右边缘裁掉 -->
+                        <WrapPanel Grid.Row="4" Margin="0,14,0,0">
+                            <ui:Button x:Name="ExportButton" Appearance="Primary" Margin="0,0,8,6"
                                        Icon="{ui:SymbolIcon ArrowDownload24}" Content="导出文件"
                                        Click="Export_Click"/>
-                            <ui:Button x:Name="PushFilesButton" Appearance="Secondary" Margin="8,0,0,0"
+                            <ui:Button x:Name="PushFilesButton" Appearance="Secondary" Margin="0,0,8,6"
                                        Icon="{ui:SymbolIcon ArrowUpload24}" Content="推送文件"
                                        Click="PushFiles_Click"/>
-                            <ui:Button x:Name="ViewToggleButton" Appearance="Secondary" Margin="8,0,0,0"
+                            <ui:Button x:Name="ViewToggleButton" Appearance="Secondary" Margin="0,0,8,6"
                                        Content="切换宫格显示" Click="ToggleView_Click"/>
-                            <ui:Button x:Name="CancelTransferButton" Appearance="Secondary" Margin="8,0,0,0"
+                            <ui:Button x:Name="CancelTransferButton" Appearance="Secondary" Margin="0,0,0,6"
                                        Content="取消" Visibility="Collapsed" Click="CancelTransfer_Click"/>
-                        </StackPanel>
+                        </WrapPanel>
                     </Grid>
-                </Border>
+                </controls:SquircleBorder>
 
                 <!-- ==================== 投屏 ==================== -->
-                <Border Grid.Row="1" x:Name="MirrorPanel" Style="{StaticResource Mt.Card}"
+                <controls:SquircleBorder Grid.Row="1" x:Name="MirrorPanel" Style="{StaticResource Mt.Card}"
                         Visibility="Collapsed">
+                    <!-- 最小窗口 + 侧边栏展开时这块卡片比可用高度高，
+                         内容自己滚动，保证下方的「开始投屏」按钮始终能滚到。 -->
+                    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                     <StackPanel>
                         <StackPanel Orientation="Horizontal">
                             <ui:SymbolIcon Symbol="Video24" Style="{StaticResource Mt.SectionIcon}"/>
@@ -262,40 +268,40 @@
 
                         <Border Style="{StaticResource Mt.Divider}" Margin="0,16,0,0"/>
 
-                        <Grid Margin="0,14,0,0">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="72"/>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="16"/>
-                                <ColumnDefinition Width="72"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Style="{StaticResource Mt.Label}" Text="分辨率"/>
-                            <ComboBox x:Name="SizeCombo" Grid.Column="1"
-                                      Foreground="{DynamicResource TextFillColorPrimaryBrush}"/>
-                            <TextBlock Grid.Column="3" Style="{StaticResource Mt.Label}" Text="码率"/>
-                            <ComboBox x:Name="BitRateCombo" Grid.Column="4"
-                                      Foreground="{DynamicResource TextFillColorPrimaryBrush}"/>
-                        </Grid>
+                        <!-- 侧边栏展开 + 最小窗口时左栏内容只有 ~340px，
+                             用 Grid 分列会把下拉框压到放不下「原始分辨率」。
+                             改成 WrapPanel：宽窗一行排开，窄窗自动折行，任何宽度都不裁字。 -->
+                        <WrapPanel Margin="0,14,0,0">
+                            <StackPanel Orientation="Horizontal" Margin="0,0,12,8">
+                                <TextBlock Style="{StaticResource Mt.Label}" Text="分辨率"
+                                           Width="46" VerticalAlignment="Center"/>
+                                <ComboBox x:Name="SizeCombo" Width="120"
+                                          Foreground="{DynamicResource TextFillColorPrimaryBrush}"/>
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                <TextBlock Style="{StaticResource Mt.Label}" Text="码率"
+                                           Width="40" VerticalAlignment="Center"/>
+                                <ComboBox x:Name="BitRateCombo" Width="96"
+                                          Foreground="{DynamicResource TextFillColorPrimaryBrush}"/>
+                            </StackPanel>
+                        </WrapPanel>
 
-                        <Grid Margin="0,12,0,0">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="72"/>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="16"/>
-                                <ColumnDefinition Width="72"/>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Style="{StaticResource Mt.Label}" Text="帧率"/>
-                            <ComboBox x:Name="FpsCombo" Grid.Column="1"
-                                      Foreground="{DynamicResource TextFillColorPrimaryBrush}"/>
-                            <TextBlock Grid.Column="3" Style="{StaticResource Mt.Label}" Text="录制屏幕"/>
-                            <ui:TextBox x:Name="RecordBox" Grid.Column="4" IsReadOnly="True"
-                                        PlaceholderText="留空则不录制"/>
-                            <ui:Button Grid.Column="5" Appearance="Secondary" Margin="8,0,0,0" Padding="10,4"
-                                       Content="选择…" Click="BrowseRecord_Click"/>
-                        </Grid>
+                        <WrapPanel Margin="0,4,0,0">
+                            <StackPanel Orientation="Horizontal" Margin="0,0,12,8">
+                                <TextBlock Style="{StaticResource Mt.Label}" Text="帧率"
+                                           Width="52" VerticalAlignment="Center"/>
+                                <ComboBox x:Name="FpsCombo" Width="88"
+                                          Foreground="{DynamicResource TextFillColorPrimaryBrush}"/>
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                <TextBlock Style="{StaticResource Mt.Label}" Text="录制屏幕"
+                                           Width="66" VerticalAlignment="Center"/>
+                                <ui:TextBox x:Name="RecordBox" Width="150" IsReadOnly="True"
+                                            PlaceholderText="留空则不录制"/>
+                                <ui:Button Appearance="Secondary" Margin="8,0,0,0" Padding="10,4"
+                                           Content="选择…" Click="BrowseRecord_Click"/>
+                            </StackPanel>
+                        </WrapPanel>
 
                         <WrapPanel Margin="0,16,0,0">
                             <CheckBox x:Name="NoAudioCheck" Content="不转发音频" IsChecked="True"
@@ -320,11 +326,12 @@
                                        Content="结束投屏" IsEnabled="False" Click="StopMirror_Click"/>
                         </StackPanel>
                     </StackPanel>
-                </Border>
+                    </ScrollViewer>
+                </controls:SquircleBorder>
             </Grid>
 
             <!-- ==================== 日志（常驻右栏） ==================== -->
-            <Border Grid.Column="2" Style="{StaticResource Mt.Card}">
+            <controls:SquircleBorder Grid.Column="2" Style="{StaticResource Mt.Card}">
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
@@ -353,7 +360,7 @@
                                  Background="{DynamicResource Mt.InsetFillBrush}" BorderThickness="0"
                                  Padding="10" Foreground="{DynamicResource TextFillColorPrimaryBrush}"/>
                 </Grid>
-            </Border>
+            </controls:SquircleBorder>
         </Grid>
     </Grid>
 </Page>

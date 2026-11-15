@@ -175,8 +175,8 @@ public partial class DriverPage : Page
         var owner = Application.Current?.MainWindow;
 
         return (owner is null
-            ? MessageBox.Show(text, "确认", MessageBoxButton.OKCancel, MessageBoxImage.Question)
-            : MessageBox.Show(owner, text, "确认", MessageBoxButton.OKCancel, MessageBoxImage.Question))
+            ? Dialogs.Show(text, "确认", MessageBoxButton.OKCancel, MessageBoxImage.Question)
+            : Dialogs.Show(owner, text, "确认", MessageBoxButton.OKCancel, MessageBoxImage.Question))
             == MessageBoxResult.OK;
     }
 
@@ -184,7 +184,7 @@ public partial class DriverPage : Page
     {
         var owner = Application.Current?.MainWindow;
 
-        if (owner is null) MessageBox.Show(text, title, MessageBoxButton.OK, icon);
-        else MessageBox.Show(owner, text, title, MessageBoxButton.OK, icon);
+        if (owner is null) Dialogs.Show(text, title, MessageBoxButton.OK, icon);
+        else Dialogs.Show(owner, text, title, MessageBoxButton.OK, icon);
     }
 }

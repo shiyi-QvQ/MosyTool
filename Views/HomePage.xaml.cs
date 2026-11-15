@@ -7,6 +7,7 @@ using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Media.Animation;
 using System.Windows.Threading;
 using Mosytool.Controls;
 using Mosytool.Models;
@@ -297,7 +298,7 @@ public partial class HomePage : Page
     {
         var (ok, message) = DeviceService.RebootTo(_serial, _stateKind, target);
 
-        MessageBox.Show(message, ok ? "已下发指令" : "未能完成",
+        Dialogs.Show(message, ok ? "已下发指令" : "未能完成",
                         MessageBoxButton.OK,
                         ok ? MessageBoxImage.Information : MessageBoxImage.Warning);
 
@@ -400,7 +401,7 @@ public partial class HomePage : Page
         // 系统内也能点到按钮：先问一句，切到 Fastboot 后自动继续
         if (_stateKind == "online")
         {
-            var ask = MessageBox.Show(
+            var ask = Dialogs.Show(
                 "解 / 回锁必须在 Fastboot 模式下执行。\n\n是否现在把设备切换到 Fastboot？切换完成后本工具会自动继续。",
                 "需要先进入 Fastboot", MessageBoxButton.OKCancel, MessageBoxImage.Question);
             if (ask != MessageBoxResult.OK) return;
@@ -410,7 +411,7 @@ public partial class HomePage : Page
 
         if (_stateKind != "fastboot")
         {
-            MessageBox.Show("解 / 回锁只能在 Fastboot 模式下操作。", "提示",
+            Dialogs.Show("解 / 回锁只能在 Fastboot 模式下操作。", "提示",
                             MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
@@ -422,7 +423,7 @@ public partial class HomePage : Page
             : "回锁 bootloader 同样会清空数据。\n\n" +
               "如果当前系统或分区不是官方原版，回锁后可能无法开机（变砖），请务必确认已刷回官方完整包。\n\n确定继续吗？";
 
-        if (MessageBox.Show(warning, $"确认{action} BL",
+        if (Dialogs.Show(warning, $"确认{action} BL",
                             MessageBoxButton.OKCancel, MessageBoxImage.Warning) != MessageBoxResult.OK)
             return;
 
@@ -435,7 +436,7 @@ public partial class HomePage : Page
         if (!ok && lines.Count > 0)
             message += "\n\n--- 设备返回 ---\n" + string.Join("\n", lines.ToArray().TakeLast(8));
 
-        MessageBox.Show(message, ok ? $"{action}指令已下发" : $"{action}失败",
+        Dialogs.Show(message, ok ? $"{action}指令已下发" : $"{action}失败",
                         MessageBoxButton.OK,
                         ok ? MessageBoxImage.Information : MessageBoxImage.Warning);
 
@@ -453,7 +454,7 @@ public partial class HomePage : Page
         var (ok, message) = DeviceService.RebootTo(_serial, _stateKind, "fastboot");
         if (!ok)
         {
-            MessageBox.Show(message, "切换失败", MessageBoxButton.OK, MessageBoxImage.Warning);
+            Dialogs.Show(message, "切换失败", MessageBoxButton.OK, MessageBoxImage.Warning);
             return false;
         }
 
@@ -475,7 +476,7 @@ public partial class HomePage : Page
             return true;
         }
 
-        MessageBox.Show("等待设备进入 Fastboot 超时。\n\n请确认数据线连接正常，或手动重启到 bootloader 后重试。",
+        Dialogs.Show("等待设备进入 Fastboot 超时。\n\n请确认数据线连接正常，或手动重启到 bootloader 后重试。",
                         "超时", MessageBoxButton.OK, MessageBoxImage.Warning);
         _ = DetectAsync();
         return false;
@@ -576,10 +577,15 @@ public partial class HomePage : Page
                         ?? AnnouncementService.ParseTime(item.CreatedAt);
 
         // ── 标题行：徽章 + 置顶 + 标题 ──
-        var titleRow = new StackPanel { Orientation = Orientation.Horizontal };
-        titleRow.Children.Add(new Border
+        // 用 Grid 分列：横向 StackPanel 会给标题无限宽，窄窗口下省略号不生效、标题直接顶出卡片
+        var titleRow = new Grid();
+        titleRow.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        titleRow.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        titleRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+
+        titleRow.Children.Add(new SquircleBorder
         {
-            CornerRadius      = new CornerRadius(4),
+            CornerRadius      = 6,
             Padding           = new Thickness(6, 1, 6, 1),
             Background        = accent,
             VerticalAlignment = VerticalAlignment.Center,
@@ -593,22 +599,24 @@ public partial class HomePage : Page
 
         if (item.Pinned)
         {
-            titleRow.Children.Add(new Border
+            var pinBadge = new SquircleBorder
             {
-                CornerRadius      = new CornerRadius(4),
+                CornerRadius      = 6,
                 Padding           = new Thickness(6, 1, 6, 1),
                 Margin            = new Thickness(6, 0, 0, 0),
                 Background        = (Brush)FindResource("AccentFillColorDefaultBrush"),
                 VerticalAlignment = VerticalAlignment.Center,
                 Child = new TextBlock { Text = "置顶", FontSize = 11, Foreground = Brushes.White },
-            });
+            };
+            Grid.SetColumn(pinBadge, 1);
+            titleRow.Children.Add(pinBadge);
         }
 
         // 标题里也可能夹着 **、` 之类的语法字符，走一遍 Markdown 取文本，别把星号显示出来
         var title = MarkdownRenderer.ToPlainText(item.Title);
         if (string.IsNullOrWhiteSpace(title)) title = item.Title?.Trim() ?? string.Empty;
 
-        titleRow.Children.Add(new TextBlock
+        var titleBlock = new TextBlock
         {
             Text              = string.IsNullOrWhiteSpace(title) ? "(无标题)" : title,
             FontSize          = 13.5,
@@ -617,7 +625,9 @@ public partial class HomePage : Page
             VerticalAlignment = VerticalAlignment.Center,
             TextTrimming      = TextTrimming.CharacterEllipsis,
             Foreground        = (Brush)FindResource("TextFillColorPrimaryBrush"),
-        });
+        };
+        Grid.SetColumn(titleBlock, 2);
+        titleRow.Children.Add(titleBlock);
 
         var header = new Grid();
         header.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
@@ -665,34 +675,56 @@ public partial class HomePage : Page
         layout.Children.Add(content);
 
         var normalFill   = (Brush)FindResource("ControlFillColorSecondaryBrush");
-        var hoverFill    = (Brush)FindResource("CardBackgroundFillColorSecondaryBrush");
+        var hoverFill    = (Brush)FindResource("Mt.Button.HoverOverlayBrush");
         var normalStroke = (Brush)FindResource("CardStrokeColorDefaultBrush");
 
-        var card = new Border
+        // 悬停用一层不透明度渐变的叠加层，而不是直接换 Background，避免底色硬切。
+        // 这一层必须铺满整张卡片：之前挂在 Padding 里侧，只有内容区被盖住，
+        // 四周留出一圈原底色，看上去像悬停时凭空多出一块白色圆角区域。
+        // 颜色也换成按钮/列表项同款的一点点黑，悬停只是轻微压深，不会突然变白。
+        var hoverLayer = new SquircleBorder
+        {
+            CornerRadius     = 8,
+            Background       = hoverFill,
+            Opacity          = 0,
+            IsHitTestVisible = false,
+        };
+
+        layout.Margin = new Thickness(12, 10, 12, 10);
+
+        var inner = new Grid();
+        inner.Children.Add(hoverLayer);
+        inner.Children.Add(layout);
+
+        var card = new SquircleBorder
         {
             Margin          = new Thickness(0, 10, 0, 0),
-            Padding         = new Thickness(12, 10, 12, 10),
-            CornerRadius    = new CornerRadius(8),
+            CornerRadius    = 8,
             Background      = normalFill,
-            BorderThickness = new Thickness(1),
+            BorderThickness = 1,
             BorderBrush     = normalStroke,
             Cursor          = Cursors.Hand,
             ToolTip         = "点击查看完整公告",
-            Child           = layout,
+            Child           = inner,
         };
 
-        card.MouseEnter += (_, _) => { card.Background = hoverFill; card.BorderBrush = accent; };
-        card.MouseLeave += (_, _) => { card.Background = normalFill; card.BorderBrush = normalStroke; };
+        void FadeTo(double target, int durationMs)
+        {
+            var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
+
+            hoverLayer.BeginAnimation(OpacityProperty,
+                new DoubleAnimation(target, TimeSpan.FromMilliseconds(durationMs)) { EasingFunction = ease });
+        }
+
+        card.MouseEnter += (_, _) => FadeTo(1, 120);
+        card.MouseLeave += (_, _) => FadeTo(0, 180);
         card.MouseLeftButtonUp += (_, _) => OpenAnnouncementDetail(item);
 
         return card;
     }
 
     private void OpenAnnouncementDetail(Announcement item)
-    {
-        var window = new AnnouncementWindow(item, isPopup: false) { Owner = Window.GetWindow(this) };
-        window.ShowDialog();
-    }
+        => Dialogs.ShowAnnouncement(Window.GetWindow(this), item, isPopup: false);
 
     /// <summary>把发布时间转成「刚刚 / N 分钟前 / N 小时前 / N 天前 / 日期」。</summary>
     private static string FormatRelative(DateTimeOffset local)
@@ -715,8 +747,7 @@ public partial class HomePage : Page
         if (pending.Count == 0) return;
 
         // 以前一次只弹最新的那条，其余要等下次启动，用户会以为「公告只显示一条」。
-        // 现在把待提醒的公告合并到一个窗口里，一次看完；弹窗打开即记为已弹过。
-        var window = new AnnouncementWindow(pending, isPopup: true) { Owner = Window.GetWindow(this) };
-        window.ShowDialog();
+        // 现在把待提醒的公告合并到一个遮罩卡片里，一次看完；弹窗打开即记为已弹过。
+        Dialogs.ShowAnnouncement(Window.GetWindow(this), pending, isPopup: true);
     }
 }

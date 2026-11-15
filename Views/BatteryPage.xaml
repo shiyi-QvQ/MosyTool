@@ -1,4 +1,5 @@
-<Page x:Class="Mosytool.Views.BatteryPage"
+<Page
+      xmlns:controls="clr-namespace:Mosytool.Controls" x:Class="Mosytool.Views.BatteryPage"
       xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
       xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
@@ -14,7 +15,7 @@
                            Text="多节点读取电池管理芯片数据（power_supply / bms / qcom-battery / dumpsys）：健康度优先取芯片直接上报的 SOH，取不到才用「实测满电容量 ÷ 出厂设计容量」推算，不做算法估算。" />
 
                 <!-- ============ 设备与读取 ============ -->
-                <Border x:Name="DeviceCard" Style="{StaticResource Mt.Card}" Margin="0,18,0,0">
+                <controls:SquircleBorder x:Name="DeviceCard" Style="{StaticResource Mt.Card}" Margin="0,18,0,0">
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
@@ -39,10 +40,10 @@
                                        Content="读取电池数据" Click="ReadButton_Click" />
                         </StackPanel>
                     </Grid>
-                </Border>
+                </controls:SquircleBorder>
 
                 <!-- ============ 健康度（主视觉） ============ -->
-                <Border x:Name="HealthCard" Style="{StaticResource Mt.Card}" Margin="0,14,0,0">
+                <controls:SquircleBorder x:Name="HealthCard" Style="{StaticResource Mt.Card}" Margin="0,14,0,0">
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto" />
@@ -70,59 +71,59 @@
 
                         <!-- 六项关键指标：容量 / 循环 / 电压 / 温度 / 电流 / 电量 -->
                         <UniformGrid Grid.Column="2" Columns="3" Rows="2" VerticalAlignment="Center">
-                            <Border Style="{StaticResource Mt.Inset}" Margin="0,0,10,10">
+                            <controls:SquircleBorder Style="{StaticResource Mt.Inset}" Margin="0,0,10,10">
                                 <StackPanel>
                                     <TextBlock Text="设计容量" Style="{StaticResource Mt.Caption}" />
                                     <TextBlock x:Name="DesignValue" Text="--" Style="{StaticResource Mt.Metric}"
                                                Margin="0,4,0,0" />
                                 </StackPanel>
-                            </Border>
+                            </controls:SquircleBorder>
 
-                            <Border Style="{StaticResource Mt.Inset}" Margin="0,0,10,10">
+                            <controls:SquircleBorder Style="{StaticResource Mt.Inset}" Margin="0,0,10,10">
                                 <StackPanel>
                                     <TextBlock Text="实测满电容量" Style="{StaticResource Mt.Caption}" />
                                     <TextBlock x:Name="FullValue" Text="--" Style="{StaticResource Mt.Metric}"
                                                Margin="0,4,0,0" />
                                 </StackPanel>
-                            </Border>
+                            </controls:SquircleBorder>
 
-                            <Border Style="{StaticResource Mt.Inset}" Margin="0,0,0,10">
+                            <controls:SquircleBorder Style="{StaticResource Mt.Inset}" Margin="0,0,0,10">
                                 <StackPanel>
                                     <TextBlock Text="循环次数" Style="{StaticResource Mt.Caption}" />
                                     <TextBlock x:Name="CycleValue" Text="--" Style="{StaticResource Mt.Metric}"
                                                Margin="0,4,0,0" />
                                 </StackPanel>
-                            </Border>
+                            </controls:SquircleBorder>
 
-                            <Border Style="{StaticResource Mt.Inset}" Margin="0,0,10,0">
+                            <controls:SquircleBorder Style="{StaticResource Mt.Inset}" Margin="0,0,10,0">
                                 <StackPanel>
                                     <TextBlock Text="电压" Style="{StaticResource Mt.Caption}" />
                                     <TextBlock x:Name="VoltageValue" Text="--" Style="{StaticResource Mt.Metric}"
                                                Margin="0,4,0,0" />
                                 </StackPanel>
-                            </Border>
+                            </controls:SquircleBorder>
 
-                            <Border Style="{StaticResource Mt.Inset}" Margin="0,0,10,0">
+                            <controls:SquircleBorder Style="{StaticResource Mt.Inset}" Margin="0,0,10,0">
                                 <StackPanel>
                                     <TextBlock Text="温度" Style="{StaticResource Mt.Caption}" />
                                     <TextBlock x:Name="TempValue" Text="--" Style="{StaticResource Mt.Metric}"
                                                Margin="0,4,0,0" />
                                 </StackPanel>
-                            </Border>
+                            </controls:SquircleBorder>
 
-                            <Border Style="{StaticResource Mt.Inset}" Margin="0">
+                            <controls:SquircleBorder Style="{StaticResource Mt.Inset}" Margin="0">
                                 <StackPanel>
                                     <TextBlock Text="当前电流" Style="{StaticResource Mt.Caption}" />
                                     <TextBlock x:Name="CurrentValue" Text="--" Style="{StaticResource Mt.Metric}"
                                                Margin="0,4,0,0" />
                                 </StackPanel>
-                            </Border>
+                            </controls:SquircleBorder>
                         </UniformGrid>
                     </Grid>
-                </Border>
+                </controls:SquircleBorder>
 
                 <!-- ============ 容量对比 ============ -->
-                <Border x:Name="CapacityCard" Style="{StaticResource Mt.Card}" Margin="0,14,0,0">
+                <controls:SquircleBorder x:Name="CapacityCard" Style="{StaticResource Mt.Card}" Margin="0,14,0,0">
                     <StackPanel>
                         <Grid>
                             <StackPanel Orientation="Horizontal">
@@ -151,10 +152,10 @@
                         <TextBlock x:Name="CapacityNote" Style="{StaticResource Mt.Caption}" Margin="0,14,0,0"
                                    Text="实测容量低于设计容量即为正常老化。差值越大，满电续航越短。" />
                     </StackPanel>
-                </Border>
+                </controls:SquircleBorder>
 
                 <!-- ============ 电池寿命 ============ -->
-                <Border x:Name="LifeCard" Style="{StaticResource Mt.Card}" Margin="0,14,0,0">
+                <controls:SquircleBorder x:Name="LifeCard" Style="{StaticResource Mt.Card}" Margin="0,14,0,0">
                     <StackPanel>
                         <Grid>
                             <StackPanel Orientation="Horizontal">
@@ -183,10 +184,10 @@
                         <TextBlock x:Name="LifeNote" Style="{StaticResource Mt.Caption}" Margin="0,14,0,0"
                                    Text="剩余寿命由循环次数换算（无循环数据时按容量衰减到 80% 折算），只是寿命参考，不影响健康度判定。" />
                     </StackPanel>
-                </Border>
+                </controls:SquircleBorder>
 
                 <!-- ============ 电池信息（多节点采集） ============ -->
-                <Border x:Name="InfoCard" Style="{StaticResource Mt.Card}" Margin="0,14,0,0">
+                <controls:SquircleBorder x:Name="InfoCard" Style="{StaticResource Mt.Card}" Margin="0,14,0,0">
                     <StackPanel>
                         <Grid>
                             <StackPanel Orientation="Horizontal">
@@ -198,87 +199,87 @@
                         </Grid>
 
                         <UniformGrid Columns="3" Rows="3" Margin="0,16,0,0">
-                            <Border Style="{StaticResource Mt.Inset}" Margin="0,0,10,10">
+                            <controls:SquircleBorder Style="{StaticResource Mt.Inset}" Margin="0,0,10,10">
                                 <StackPanel>
                                     <TextBlock Text="电源类型" Style="{StaticResource Mt.Caption}" />
                                     <TextBlock x:Name="PowerSourceValue" Text="--" Style="{StaticResource Mt.Metric}"
                                                Margin="0,4,0,0" />
                                 </StackPanel>
-                            </Border>
+                            </controls:SquircleBorder>
 
-                            <Border Style="{StaticResource Mt.Inset}" Margin="0,0,10,10">
+                            <controls:SquircleBorder Style="{StaticResource Mt.Inset}" Margin="0,0,10,10">
                                 <StackPanel>
                                     <TextBlock Text="充电功率" Style="{StaticResource Mt.Caption}" />
                                     <TextBlock x:Name="PowerValue" Text="--" Style="{StaticResource Mt.Metric}"
                                                Margin="0,4,0,0" />
                                 </StackPanel>
-                            </Border>
+                            </controls:SquircleBorder>
 
-                            <Border Style="{StaticResource Mt.Inset}" Margin="0,0,0,10">
+                            <controls:SquircleBorder Style="{StaticResource Mt.Inset}" Margin="0,0,0,10">
                                 <StackPanel>
                                     <TextBlock Text="充电限流" Style="{StaticResource Mt.Caption}" />
                                     <TextBlock x:Name="LimitValue" Text="--" Style="{StaticResource Mt.Metric}"
                                                Margin="0,4,0,0" />
                                 </StackPanel>
-                            </Border>
+                            </controls:SquircleBorder>
 
-                            <Border Style="{StaticResource Mt.Inset}" Margin="0,0,10,10">
+                            <controls:SquircleBorder Style="{StaticResource Mt.Inset}" Margin="0,0,10,10">
                                 <StackPanel>
                                     <TextBlock Text="充满还需" Style="{StaticResource Mt.Caption}" />
                                     <TextBlock x:Name="FullTimeValue" Text="--" Style="{StaticResource Mt.Metric}"
                                                Margin="0,4,0,0" />
                                 </StackPanel>
-                            </Border>
+                            </controls:SquircleBorder>
 
-                            <Border Style="{StaticResource Mt.Inset}" Margin="0,0,10,10">
+                            <controls:SquircleBorder Style="{StaticResource Mt.Inset}" Margin="0,0,10,10">
                                 <StackPanel>
                                     <TextBlock Text="放空还需" Style="{StaticResource Mt.Caption}" />
                                     <TextBlock x:Name="EmptyTimeValue" Text="--" Style="{StaticResource Mt.Metric}"
                                                Margin="0,4,0,0" />
                                 </StackPanel>
-                            </Border>
+                            </controls:SquircleBorder>
 
-                            <Border Style="{StaticResource Mt.Inset}" Margin="0,0,0,10">
+                            <controls:SquircleBorder Style="{StaticResource Mt.Inset}" Margin="0,0,0,10">
                                 <StackPanel>
                                     <TextBlock Text="电压区间" Style="{StaticResource Mt.Caption}" />
                                     <TextBlock x:Name="VoltageRangeValue" Text="--" Style="{StaticResource Mt.Metric}"
                                                Margin="0,4,0,0" />
                                 </StackPanel>
-                            </Border>
+                            </controls:SquircleBorder>
 
-                            <Border Style="{StaticResource Mt.Inset}" Margin="0,0,10,0">
+                            <controls:SquircleBorder Style="{StaticResource Mt.Inset}" Margin="0,0,10,0">
                                 <StackPanel>
                                     <TextBlock Text="电池厂商" Style="{StaticResource Mt.Caption}" />
                                     <TextBlock x:Name="MakerValue" Text="--" Style="{StaticResource Mt.Metric}"
                                                Margin="0,4,0,0" TextTrimming="CharacterEllipsis" />
                                 </StackPanel>
-                            </Border>
+                            </controls:SquircleBorder>
 
-                            <Border Style="{StaticResource Mt.Inset}" Margin="0,0,10,0">
+                            <controls:SquircleBorder Style="{StaticResource Mt.Inset}" Margin="0,0,10,0">
                                 <StackPanel>
                                     <TextBlock Text="电池序列号" Style="{StaticResource Mt.Caption}" />
                                     <TextBlock x:Name="SerialValue" Text="--" Style="{StaticResource Mt.Metric}"
                                                Margin="0,4,0,0" TextTrimming="CharacterEllipsis" />
                                 </StackPanel>
-                            </Border>
+                            </controls:SquircleBorder>
 
-                            <Border Style="{StaticResource Mt.Inset}" Margin="0">
+                            <controls:SquircleBorder Style="{StaticResource Mt.Inset}" Margin="0">
                                 <StackPanel>
                                     <TextBlock Text="能量标称" Style="{StaticResource Mt.Caption}" />
                                     <TextBlock x:Name="EnergyValue" Text="--" Style="{StaticResource Mt.Metric}"
                                                Margin="0,4,0,0" />
                                 </StackPanel>
-                            </Border>
+                            </controls:SquircleBorder>
                         </UniformGrid>
 
                         <TextBlock x:Name="HealthSourceNote" Style="{StaticResource Mt.Caption}" Margin="0,14,0,0"
                                    TextWrapping="Wrap"
                                    Text="健康度优先取电池芯片直接上报的 SOH，取不到才用「实测满电容量 ÷ 设计容量」推算。" />
                     </StackPanel>
-                </Border>
+                </controls:SquircleBorder>
 
                 <!-- ============ 结论 ============ -->
-                <Border x:Name="VerdictCard" Style="{StaticResource Mt.Card.Accent}" Margin="0,14,0,0">
+                <controls:SquircleBorder x:Name="VerdictCard" Style="{StaticResource Mt.Card.Accent}" Margin="0,14,0,0">
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
@@ -289,9 +290,9 @@
                             <StackPanel Orientation="Horizontal">
                                 <ui:SymbolIcon Style="{StaticResource Mt.SectionIcon}" Symbol="ShieldCheckmark24" />
                                 <TextBlock Style="{StaticResource Mt.SectionTitle}" Text="评估结论" />
-                                <Border x:Name="VerdictPill" Style="{StaticResource Mt.Pill}" Margin="12,0,0,0">
+                                <controls:SquircleBorder x:Name="VerdictPill" Style="{StaticResource Mt.Pill}" Margin="12,0,0,0">
                                     <TextBlock x:Name="VerdictPillText" Text="等待数据" Style="{StaticResource Mt.Pill.Text}" />
-                                </Border>
+                                </controls:SquircleBorder>
                             </StackPanel>
 
                             <TextBlock x:Name="VerdictText" Style="{StaticResource Mt.BodyMuted}" Margin="0,12,0,0"
@@ -305,22 +306,22 @@
                                        HorizontalAlignment="Right" Text="-" />
                         </StackPanel>
                     </Grid>
-                </Border>
+                </controls:SquircleBorder>
 
                 <!-- ============ 原始数据 ============ -->
                 <Expander x:Name="RawExpander" Margin="0,14,0,0" IsExpanded="False"
                           Header="原始 sysfs 数据（可核对每一项来源）">
-                    <Border Style="{StaticResource Mt.Inset}" Margin="0,10,0,0">
+                    <controls:SquircleBorder Style="{StaticResource Mt.Inset}" Margin="0,10,0,0">
                         <ScrollViewer MaxHeight="260" VerticalScrollBarVisibility="Auto"
                                       HorizontalScrollBarVisibility="Auto">
                             <TextBlock x:Name="RawText" Style="{StaticResource Mt.Mono}"
                                        Text="尚未读取" TextWrapping="NoWrap" />
                         </ScrollViewer>
-                    </Border>
+                    </controls:SquircleBorder>
                 </Expander>
 
                 <!-- ============ 日志 ============ -->
-                <Border Style="{StaticResource Mt.Card}" Margin="0,14,0,0">
+                <controls:SquircleBorder Style="{StaticResource Mt.Card}" Margin="0,14,0,0">
                     <StackPanel>
                         <Grid>
                             <StackPanel Orientation="Horizontal">
@@ -336,7 +337,7 @@
                                      BorderThickness="0" Padding="12"
                                      Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
                     </StackPanel>
-                </Border>
+                </controls:SquircleBorder>
             </StackPanel>
         </ScrollViewer>
     </Grid>

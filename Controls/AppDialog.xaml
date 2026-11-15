@@ -1,28 +1,22 @@
-<Window x:Class="Mosytool.Controls.AppDialog"
-        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
-        Title="提示"
-        Width="460"
-        SizeToContent="Height"
-        WindowStyle="None"
-        AllowsTransparency="True"
-        Background="Transparent"
-        ResizeMode="NoResize"
-        ShowInTaskbar="False"
-        WindowStartupLocation="CenterOwner"
-        FontFamily="Microsoft YaHei UI">
+<UserControl x:Class="Mosytool.Controls.AppDialog"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             xmlns:controls="clr-namespace:Mosytool.Controls"
+             FontFamily="Microsoft YaHei UI">
 
-    <Border Margin="14"
-            CornerRadius="12"
+    <!-- 卡片本体：遮罩、居中与入场/退场动效都由 ModalOverlay 负责 -->
+    <controls:SquircleBorder x:Name="Card"
+            Width="460"
+            CornerRadius="14"
             Background="{DynamicResource SolidBackgroundFillColorBaseBrush}"
             BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
             BorderThickness="1">
-        <Border.Effect>
-            <DropShadowEffect BlurRadius="26" ShadowDepth="6" Opacity="0.3" Color="Black"/>
-        </Border.Effect>
+        <controls:SquircleBorder.Effect>
+            <DropShadowEffect BlurRadius="40" ShadowDepth="10" Opacity="0.34" Color="Black"/>
+        </controls:SquircleBorder.Effect>
 
-        <Grid Margin="24,22,24,20" MouseLeftButtonDown="Root_MouseLeftButtonDown">
+        <Grid Margin="26,24,26,22" KeyboardNavigation.TabNavigation="Cycle">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
@@ -49,5 +43,5 @@
             <StackPanel x:Name="ButtonHost" Grid.Row="2" Orientation="Horizontal"
                         HorizontalAlignment="Right" Margin="0,22,0,0"/>
         </Grid>
-    </Border>
-</Window>
+    </controls:SquircleBorder>
+</UserControl>

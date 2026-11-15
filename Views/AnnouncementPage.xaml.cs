@@ -35,6 +35,10 @@ public partial class AnnouncementPage : Page
         NoticeList.ItemsSource = _view;
         Loaded += OnLoaded;
         Unloaded += (_, _) => _cts?.Cancel();
+
+        // FlowDocumentScrollViewer 会吞掉滚轮（自身高度被撑满、没有可滚动余量），
+        // 鼠标停在正文上时整页就滚不动了。这里把滚轮转交给页面所在的 ScrollViewer。
+        DetailMarkdown.PreviewMouseWheel += DetailMarkdown_PreviewMouseWheel;
     }
 
     // ===================================================================== 列表行
@@ -167,6 +171,65 @@ public partial class AnnouncementPage : Page
     }
 
     // ===================================================================== 详情
+
+    private void DetailMarkdown_PreviewMouseWheel(object sender, System.Windows.Input.MouseWheelEventArgs e)
+    {
+        if (e.Handled) return;
+
+        // 正文比卡片高时它自己能滚，交给它
+        if (DocumentScroller() is { ScrollableHeight: > 0 }) return;
+
+        // 否则它会把这个滚轮事件吞掉，整页就滚不动了：转交给外层可滚动的 ScrollViewer
+        var outer = FindScrollableAncestor();
+        if (outer is null) return;
+
+        e.Handled = true;
+        outer.RaiseEvent(new System.Windows.Input.MouseWheelEventArgs(
+            e.MouseDevice, e.Timestamp, e.Delta)
+        {
+            RoutedEvent = UIElement.MouseWheelEvent,
+            Source      = outer,
+        });
+    }
+
+    /// <summary>FlowDocumentScrollViewer 内部的滚动条（模板部件 PART_ContentHost）。</summary>
+    private ScrollViewer? DocumentScroller()
+    {
+        DetailMarkdown.ApplyTemplate();
+
+        return DetailMarkdown.Template?.FindName("PART_ContentHost", DetailMarkdown) as ScrollViewer
+               ?? FindDescendantScrollViewer(DetailMarkdown);
+    }
+
+    private static ScrollViewer? FindDescendantScrollViewer(DependencyObject root)
+    {
+        var count = VisualTreeHelper.GetChildrenCount(root);
+
+        for (var i = 0; i < count; i++)
+        {
+            var child = VisualTreeHelper.GetChild(root, i);
+            if (child is ScrollViewer viewer) return viewer;
+            if (FindDescendantScrollViewer(child) is { } nested) return nested;
+        }
+
+        return null;
+    }
+
+    private ScrollViewer? FindScrollableAncestor()
+    {
+        DependencyObject? current = this;
+
+        for (var guard = 0; current is not null && guard < 64; guard++)
+        {
+            current = current is Visual || current is System.Windows.Media.Media3D.Visual3D
+                ? VisualTreeHelper.GetParent(current)
+                : LogicalTreeHelper.GetParent(current);
+
+            if (current is ScrollViewer { ScrollableHeight: > 0 } viewer) return viewer;
+        }
+
+        return null;
+    }
 
     private void NoticeList_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {

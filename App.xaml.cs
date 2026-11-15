@@ -49,6 +49,7 @@ public partial class App : Application
         ThemeService.Initialize();
 
         Controls.PageTransition.Install();
+        Controls.PressMotion.Install();
 
         new MainWindow().Show();
     }

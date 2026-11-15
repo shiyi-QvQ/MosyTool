@@ -94,7 +94,7 @@ public partial class FastbootPage : Page
     {
         if (!FastbootService.IsAvailable)
         {
-            MessageBox.Show("未检测到 fastboot 工具，请将 platform-tools 放入程序目录的 tools 文件夹。",
+            Dialogs.Show("未检测到 fastboot 工具，请将 platform-tools 放入程序目录的 tools 文件夹。",
                 "提示", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
@@ -270,7 +270,7 @@ public partial class FastbootPage : Page
 
     private void PromptEnterFastboot()
     {
-        MessageBox.Show(
+        Dialogs.Show(
             "未检测到 Fastboot 设备。\n\n进入 Fastboot 模式的方法：\n1. 关机后同时按住「音量下键 + 电源键」\n2. 或在已连接 adb 时，到首页点击「进入 Fastboot」\n\n进入后点击「刷新检测」。",
             "请进入 Fastboot 模式", MessageBoxButton.OK, MessageBoxImage.Information);
     }
@@ -297,18 +297,18 @@ public partial class FastbootPage : Page
 
         if (string.IsNullOrEmpty(partition))
         {
-            MessageBox.Show("请选择或输入目标分区。", "提示", MessageBoxButton.OK, MessageBoxImage.Warning);
+            Dialogs.Show("请选择或输入目标分区。", "提示", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
         if (string.IsNullOrEmpty(imagePath) || !File.Exists(imagePath))
         {
-            MessageBox.Show("请先选择要刷入的镜像文件。", "提示", MessageBoxButton.OK, MessageBoxImage.Warning);
+            Dialogs.Show("请先选择要刷入的镜像文件。", "提示", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
 
         if (FastbootService.IsUserspace())
         {
-            var r = MessageBox.Show(
+            var r = Dialogs.Show(
                 "当前设备处于 FastbootD（用户空间）模式，静态分区（logo 等）不可见，刷入会报「partition does not exist」。\n\n是否先回到 bootloader 模式？",
                 "检测到 FastbootD 模式", MessageBoxButton.YesNo, MessageBoxImage.Warning);
             if (r == MessageBoxResult.Yes)
@@ -318,7 +318,7 @@ public partial class FastbootPage : Page
             }
         }
 
-        var confirm = MessageBox.Show(
+        var confirm = Dialogs.Show(
             $"确定刷入 {partition} 分区吗？\n镜像: {Path.GetFileName(imagePath)}",
             "确认刷入", MessageBoxButton.OKCancel, MessageBoxImage.Question);
         if (confirm != MessageBoxResult.OK) return;
@@ -332,12 +332,12 @@ public partial class FastbootPage : Page
             if (flashOk)
             {
                 Log("刷入成功！");
-                MessageBox.Show("刷入完成。", "完成", MessageBoxButton.OK, MessageBoxImage.Information);
+                Dialogs.Show("刷入完成。", "完成", MessageBoxButton.OK, MessageBoxImage.Information);
             }
             else
             {
                 Log("刷入失败。");
-                MessageBox.Show(
+                Dialogs.Show(
                     "刷入失败，请查看日志。\n\n常见原因：\n1. 分区名不对（A/B 设备可能是 logo_a / logo_b）\n2. 设备处于 FastbootD 模式，需先回到 bootloader",
                     "刷入失败", MessageBoxButton.OK, MessageBoxImage.Error);
             }

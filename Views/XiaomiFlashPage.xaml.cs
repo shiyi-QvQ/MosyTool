@@ -249,14 +249,14 @@ public partial class XiaomiFlashPage : Page
 
         if (FastbootService.DetectDevice() is null)
         {
-            MessageBox.Show("未检测到 Fastboot 设备。\n\n请让手机进入 Fastboot（bootloader）模式后再试。",
+            Dialogs.Show("未检测到 Fastboot 设备。\n\n请让手机进入 Fastboot（bootloader）模式后再试。",
                             "无法开始", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
 
         var confirm = BuildConfirmText(plan);
 
-        if (MessageBox.Show(confirm, "确认开始线刷", MessageBoxButton.OKCancel,
+        if (Dialogs.Show(confirm, "确认开始线刷", MessageBoxButton.OKCancel,
                             MessageBoxImage.Warning, MessageBoxResult.Cancel) != MessageBoxResult.OK)
             return;
 

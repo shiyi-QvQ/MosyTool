@@ -1,11 +1,14 @@
-<Page x:Class="Mosytool.Views.AnnouncementPage"
+<Page
+      xmlns:controls="clr-namespace:Mosytool.Controls" x:Class="Mosytool.Views.AnnouncementPage"
       xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
       xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
       Title="公告">
     <Page.Resources>
-        <!-- 列表项：左侧一根等级色条 + 标题/预览/时间，选中态交给 WPF-UI 的 ListBoxItem 样式 -->
-        <Style x:Key="AnnouncementListItem" TargetType="{x:Type ListBoxItem}">
+        <!-- 列表项：左侧一根等级色条 + 标题/预览/时间；
+             外框走 Mt.ListItem 的连续曲率模板，悬停/选中用透明度渐变过渡 -->
+        <Style x:Key="AnnouncementListItem" TargetType="{x:Type ListBoxItem}"
+               BasedOn="{StaticResource Mt.ListItem}">
             <Setter Property="Padding" Value="0" />
             <Setter Property="Margin" Value="8,2" />
             <Setter Property="HorizontalContentAlignment" Value="Stretch" />
@@ -43,12 +46,12 @@
         <!-- ============ 列表 + 详情 ============ -->
         <Grid Grid.Row="1" Margin="0,16,0,0">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="340" />
+                <ColumnDefinition Width="320" />
                 <ColumnDefinition Width="16" />
                 <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
 
-            <Border Style="{StaticResource Mt.Card.Flush}">
+            <controls:SquircleBorder Style="{StaticResource Mt.Card.Flush}">
                 <Grid>
                     <ListBox x:Name="NoticeList" Background="Transparent" BorderThickness="0"
                              Padding="0,6"
@@ -68,29 +71,38 @@
                                             Margin="0,1,12,1" />
 
                                     <StackPanel Grid.Column="1">
-                                        <StackPanel Orientation="Horizontal">
+                                        <!-- 用 Grid 而不是横向 StackPanel：StackPanel 会给无限宽，
+                                             标题的 CharacterEllipsis 就永远不生效，长标题会顶出卡片 -->
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+
                                             <Border Width="7" Height="7" CornerRadius="4" Margin="0,0,7,0"
                                                     VerticalAlignment="Center"
                                                     Background="{DynamicResource AccentFillColorDefaultBrush}"
                                                     Visibility="{Binding UnreadDotVisibility}" />
-                                            <ui:SymbolIcon Symbol="Pin24" FontSize="12" Margin="0,0,6,0"
+                                            <ui:SymbolIcon Grid.Column="1" Symbol="Pin24" FontSize="12" Margin="0,0,6,0"
                                                            VerticalAlignment="Center"
                                                            Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}"
                                                            Visibility="{Binding PinnedVisibility}" />
-                                            <TextBlock Text="{Binding Title}" FontSize="13.5" FontWeight="SemiBold"
+                                            <TextBlock Grid.Column="2" Text="{Binding Title}"
+                                                       FontSize="13.5" FontWeight="SemiBold"
                                                        TextTrimming="CharacterEllipsis"
                                                        Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
-                                        </StackPanel>
+                                        </Grid>
 
                                         <TextBlock Text="{Binding Preview}" FontSize="12" Margin="0,5,0,0"
                                                    TextTrimming="CharacterEllipsis"
                                                    Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
 
                                         <StackPanel Orientation="Horizontal" Margin="0,7,0,0">
-                                            <Border Style="{StaticResource Mt.Pill}" Padding="6,1">
+                                            <controls:SquircleBorder Style="{StaticResource Mt.Pill}" Padding="6,1">
                                                 <TextBlock Text="{Binding LevelText}" Style="{StaticResource Mt.Pill.Text}"
                                                            Foreground="{Binding LevelBrush}" />
-                                            </Border>
+                                            </controls:SquircleBorder>
                                             <TextBlock Text="{Binding DateText}" Style="{StaticResource Mt.Caption}"
                                                        Margin="8,0,0,0" VerticalAlignment="Center" />
                                         </StackPanel>
@@ -129,10 +141,10 @@
                                    HorizontalAlignment="Center" Click="Refresh_Click" />
                     </StackPanel>
                 </Grid>
-            </Border>
+            </controls:SquircleBorder>
 
             <!-- 详情：整块正文按 Markdown 渲染，可选中复制 -->
-            <Border Grid.Column="2" Style="{StaticResource Mt.Card}" Padding="24,20,16,20">
+            <controls:SquircleBorder Grid.Column="2" Style="{StaticResource Mt.Card}" Padding="24,20,16,20">
                 <Grid>
                     <Grid x:Name="DetailPanel" Visibility="Collapsed">
                         <Grid.RowDefinitions>
@@ -143,15 +155,15 @@
                         </Grid.RowDefinitions>
 
                         <StackPanel Orientation="Horizontal">
-                            <Border x:Name="DetailLevelBadge" Style="{StaticResource Mt.Pill}">
+                            <controls:SquircleBorder x:Name="DetailLevelBadge" Style="{StaticResource Mt.Pill}">
                                 <TextBlock x:Name="DetailLevelText" Text="公告"
                                            Style="{StaticResource Mt.Pill.Text}" />
-                            </Border>
-                            <Border x:Name="DetailPinnedBadge" Style="{StaticResource Mt.Pill.Accent}"
+                            </controls:SquircleBorder>
+                            <controls:SquircleBorder x:Name="DetailPinnedBadge" Style="{StaticResource Mt.Pill.Accent}"
                                     Margin="8,0,0,0" Visibility="Collapsed">
                                 <TextBlock Text="置顶" Style="{StaticResource Mt.Pill.Text}"
                                            Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}" />
-                            </Border>
+                            </controls:SquircleBorder>
                             <TextBlock x:Name="DetailMetaText" Style="{StaticResource Mt.Caption}"
                                        Margin="10,0,0,0" VerticalAlignment="Center" />
                         </StackPanel>
@@ -162,10 +174,11 @@
 
                         <Border Grid.Row="2" Style="{StaticResource Mt.Divider}" Margin="0,14,8,0" />
 
+                        <!-- 详情区在窄窗口下只有 ~350px，宽表格/代码块允许横向滚动，别直接裁掉 -->
                         <FlowDocumentScrollViewer x:Name="DetailMarkdown" Grid.Row="3" Margin="0,12,8,0"
                                                   IsToolBarVisible="False"
                                                   VerticalScrollBarVisibility="Auto"
-                                                  HorizontalScrollBarVisibility="Disabled"
+                                                  HorizontalScrollBarVisibility="Auto"
                                                   Background="Transparent" BorderThickness="0" Padding="0" />
                     </Grid>
 
@@ -176,7 +189,7 @@
                                    Margin="0,10,0,0" HorizontalAlignment="Center" />
                     </StackPanel>
                 </Grid>
-            </Border>
+            </controls:SquircleBorder>
         </Grid>
     </Grid>
 </Page>

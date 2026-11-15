@@ -1,0 +1,115 @@
+<UserControl x:Class="Mosytool.Controls.WindowTitleBar"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             Height="48"
+             FontFamily="Microsoft YaHei UI">
+
+    <UserControl.Resources>
+        <!-- 标题栏按钮：和系统标题栏一样是「小圆角胶囊」，悬停/按下用低透明度画刷，
+             避免在渐变底上出现一块突兀的实色。 -->
+        <Style x:Key="Mt.CaptionButton" TargetType="{x:Type Button}">
+            <Setter Property="Width" Value="44" />
+            <Setter Property="Height" Value="30" />
+            <Setter Property="Margin" Value="2,0,0,0" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Focusable" Value="False" />
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type Button}">
+                        <Border x:Name="Bd" Background="{TemplateBinding Background}" CornerRadius="7">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background"
+                                        Value="{DynamicResource Mt.CaptionHoverBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Bd" Property="Background"
+                                        Value="{DynamicResource Mt.CaptionPressedBrush}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="Mt.CaptionCloseButton" TargetType="{x:Type Button}" BasedOn="{StaticResource Mt.CaptionButton}">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type Button}">
+                        <Border x:Name="Bd" Background="{TemplateBinding Background}" CornerRadius="7">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background"
+                                        Value="{DynamicResource Mt.CaptionCloseHoverBrush}" />
+                                <Setter Property="Foreground" Value="White" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Bd" Property="Background"
+                                        Value="{DynamicResource Mt.CaptionClosePressedBrush}" />
+                                <Setter Property="Foreground" Value="White" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid Background="Transparent">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="Auto" />
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="Auto" />
+        </Grid.ColumnDefinitions>
+
+        <ui:SymbolIcon x:Name="TitleIcon" Grid.Column="0" Symbol="Empty"
+                       FontSize="15" Margin="16,0,0,0" VerticalAlignment="Center"
+                       Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}" />
+
+        <TextBlock x:Name="TitleText" Grid.Column="1" Margin="10,0,10,0"
+                   VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
+                   FontSize="12.5" FontWeight="SemiBold"
+                   Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+
+        <StackPanel Grid.Column="2" Orientation="Horizontal"
+                    VerticalAlignment="Center" Margin="0,0,8,0">
+            <Button x:Name="MinimizeButton" Style="{StaticResource Mt.CaptionButton}"
+                    Click="Minimize_Click" ToolTip="最小化">
+                <Path Data="M1,5 L9,5"
+                      Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType={x:Type Button}}}"
+                      StrokeThickness="1" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                      Width="10" Height="10" Stretch="None" />
+            </Button>
+
+            <Button x:Name="MaximizeButton" Style="{StaticResource Mt.CaptionButton}"
+                    Click="Maximize_Click" ToolTip="最大化">
+                <Grid Width="10" Height="10">
+                    <Path x:Name="MaximizeGlyph" Data="M1,1 L9,1 9,9 1,9 Z"
+                          Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType={x:Type Button}}}"
+                          StrokeThickness="1" StrokeStartLineCap="Round" StrokeLineJoin="Round"
+                          Width="10" Height="10" Stretch="None" />
+                    <Path x:Name="RestoreGlyph" Visibility="Collapsed"
+                          Data="M3,1 L9,1 9,7 M1,3 L7,3 7,9 1,9 Z"
+                          Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType={x:Type Button}}}"
+                          StrokeThickness="1" StrokeStartLineCap="Round" StrokeLineJoin="Round"
+                          Width="10" Height="10" Stretch="None" />
+                </Grid>
+            </Button>
+
+            <Button x:Name="CloseButton" Style="{StaticResource Mt.CaptionCloseButton}"
+                    Click="Close_Click" ToolTip="关闭">
+                <Path Data="M1,1 L9,9 M9,1 L1,9"
+                      Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType={x:Type Button}}}"
+                      StrokeThickness="1" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                      Width="10" Height="10" Stretch="None" />
+            </Button>
+        </StackPanel>
+    </Grid>
+</UserControl>

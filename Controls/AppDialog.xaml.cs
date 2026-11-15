@@ -1,7 +1,8 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
-using System.Windows.Input;
+using System.Windows.Controls;
 using System.Windows.Media;
 using ControlAppearance = Wpf.Ui.Controls.ControlAppearance;
 using SymbolRegular = Wpf.Ui.Controls.SymbolRegular;
@@ -9,48 +10,64 @@ using SymbolRegular = Wpf.Ui.Controls.SymbolRegular;
 namespace Mosytool.Controls;
 
 /// <summary>
-/// 统一风格的模态对话框：圆角卡片、彩色图标、主次按钮，替代系统 MessageBox。
-/// 由 <see cref="Services.Dialogs"/> 创建，业务代码不直接 new。
+/// 统一风格的提示卡片：圆角卡片、彩色图标、主次按钮，替代系统 MessageBox。
+/// 由 <see cref="Services.Dialogs"/> 包进窗口内的遮罩层显示——
+/// 背景模糊、居中、点空白关闭、入场/退场动效都由遮罩层负责，这里只管卡片内容。
 /// </summary>
-public partial class AppDialog : Window
+public partial class AppDialog : UserControl
 {
-    private MessageBoxButton _buttons = MessageBoxButton.OK;
     private readonly List<(Wpf.Ui.Controls.Button Button, MessageBoxResult Result, bool Primary)> _actions = new();
+    private bool _finished;
 
+    /// <summary>用户选择的按钮结果；点击空白处或按 Esc 时返回取消类结果。</summary>
     public MessageBoxResult Result { get; private set; } = MessageBoxResult.None;
 
+    /// <summary>卡片结束时触发，遮罩层据此播放退场动效并退出模态循环。</summary>
+    public event Action<MessageBoxResult>? Finished;
+
     public AppDialog(string title, string message, MessageBoxButton buttons, MessageBoxImage icon,
-                     Window? owner, MessageBoxResult defaultResult = MessageBoxResult.None)
+                     MessageBoxResult defaultResult = MessageBoxResult.None)
     {
         InitializeComponent();
 
-        if (owner is not null && !ReferenceEquals(owner, this))
-            Owner = owner;
-        else
-            WindowStartupLocation = WindowStartupLocation.CenterScreen;
-
         TitleText.Text = string.IsNullOrWhiteSpace(title) ? DefaultTitle(icon) : title;
         MessageText.Text = message ?? string.Empty;
-        Title = TitleText.Text;
 
         ApplyIcon(icon);
         BuildButtons(buttons, defaultResult);
 
-        KeyDown += OnKeyDown;
-        Loaded += OnLoaded;
+        Loaded += (_, _) => FocusDefaultButton();
     }
 
-    private void OnLoaded(object sender, RoutedEventArgs e)
+    private void FocusDefaultButton()
     {
         // 让默认按钮拿到焦点，直接敲回车即可确认。
         foreach (var child in ButtonHost.Children)
         {
-            if (child is System.Windows.Controls.Button { IsDefault: true } button)
+            if (child is Button { IsDefault: true } button)
             {
                 button.Focus();
-                break;
+                return;
             }
         }
+    }
+
+    /// <summary>关闭卡片。result 会作为 <see cref="Result"/> 返回给调用方。</summary>
+    public void Dismiss(MessageBoxResult result)
+    {
+        if (_finished) return;
+
+        _finished = true;
+        Result = result;
+        Finished?.Invoke(result);
+    }
+
+    /// <summary>点击空白处 / 按 Esc 的结果：确认类对话框一律当作「取消/否」。</summary>
+    public MessageBoxResult DismissResult()
+    {
+        if (_actions.Any(a => a.Result == MessageBoxResult.Cancel)) return MessageBoxResult.Cancel;
+        if (_actions.Any(a => a.Result == MessageBoxResult.No)) return MessageBoxResult.No;
+        return _actions.Count > 0 ? _actions[0].Result : MessageBoxResult.OK;
     }
 
     private static string DefaultTitle(MessageBoxImage icon) => icon switch
@@ -82,7 +99,6 @@ public partial class AppDialog : Window
 
     private void BuildButtons(MessageBoxButton buttons, MessageBoxResult defaultResult)
     {
-        _buttons = buttons;
         _actions.Clear();
         ButtonHost.Children.Clear();
 
@@ -128,39 +144,9 @@ public partial class AppDialog : Window
             Appearance = primary ? ControlAppearance.Primary : ControlAppearance.Secondary,
         };
 
-        button.Click += (_, _) =>
-        {
-            Result = result;
-            Close();
-        };
+        button.Click += (_, _) => Dismiss(result);
 
         _actions.Add((button, result, primary));
         ButtonHost.Children.Add(button);
-    }
-
-    private void OnKeyDown(object sender, KeyEventArgs e)
-    {
-        if (e.Key != Key.Escape) return;
-
-        var cancelable = _buttons is MessageBoxButton.OKCancel or MessageBoxButton.YesNoCancel;
-        if (!cancelable) return;
-
-        Result = MessageBoxResult.Cancel;
-        Close();
-        e.Handled = true;
-    }
-
-    private void Root_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
-    {
-        if (e.LeftButton != MouseButtonState.Pressed) return;
-
-        try
-        {
-            DragMove();
-        }
-        catch (InvalidOperationException)
-        {
-            // 鼠标已抬起时忽略，属于正常情况。
-        }
     }
 }

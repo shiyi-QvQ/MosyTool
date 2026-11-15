@@ -8,9 +8,9 @@ namespace Mosytool.Controls;
 
 public static class PageTransition
 {
-    private const double DurationMs = 260;
+    private const double DurationMs = 220;
 
-    private const double OffsetY = 14;
+    private const double OffsetY = 12;
 
     private static bool _installed;
 

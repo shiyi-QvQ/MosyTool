@@ -2,19 +2,27 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Media;
-using Mosytool.Controls;
 using Mosytool.Models.Api;
 using Mosytool.Services;
 using Mosytool.Services.Api;
 
-namespace Mosytool.Views;
+namespace Mosytool.Controls;
 
-/// <summary>公告窗口：既做启动自动弹出的 popup 公告，也做首页点击查看的公告详情。</summary>
-public partial class AnnouncementWindow : Wpf.Ui.Controls.FluentWindow
+/// <summary>
+/// 公告卡片：既做启动自动弹出的 popup 公告，也做首页点击查看的公告详情。
+///
+/// 不是独立窗口——由 <see cref="Services.Dialogs.ShowCard"/> 挂到当前窗口的遮罩层里，
+/// 所以弹出来时背景会模糊、点空白处即可关闭。
+/// </summary>
+public partial class AnnouncementCard : UserControl
 {
+    /// <summary>卡片结束（点关闭 / 我知道了 / 不再提醒）。</summary>
+    public event Action? Finished;
+
     /// <summary>启动自动弹出的 popup 公告（单条）。</summary>
-    public AnnouncementWindow(Announcement announcement) : this(new[] { announcement }, isPopup: true)
+    public AnnouncementCard(Announcement announcement) : this(new[] { announcement }, isPopup: true)
     {
     }
 
@@ -22,16 +30,14 @@ public partial class AnnouncementWindow : Wpf.Ui.Controls.FluentWindow
     /// <paramref name="isPopup"/> 为 true 时是启动弹窗；为 false 时作为「公告详情」展示，
     /// 隐藏「不再提醒」并把主按钮改成「关闭」。
     /// </summary>
-    public AnnouncementWindow(Announcement announcement, bool isPopup) : this(new[] { announcement }, isPopup)
+    public AnnouncementCard(Announcement announcement, bool isPopup) : this(new[] { announcement }, isPopup)
     {
     }
 
     /// <summary>
-    /// 一次展示多条公告。以前启动弹窗一次只弹一条，剩下的要等下次启动，
-    /// 用户看到的就是「明明有好几条公告，软件里只显示一条」。
-    /// 多条时会合成一篇 Markdown（每条带小标题与时间）在一个窗口里滚动查看。
+    /// 一次展示多条公告。多条时会合成一篇 Markdown（每条带小标题与时间）在一张卡片里滚动查看。
     /// </summary>
-    public AnnouncementWindow(IReadOnlyList<Announcement> announcements, bool isPopup = true)
+    public AnnouncementCard(IReadOnlyList<Announcement> announcements, bool isPopup = true)
     {
         InitializeComponent();
 
@@ -47,9 +53,9 @@ public partial class AnnouncementWindow : Wpf.Ui.Controls.FluentWindow
         // 单条时显示这条的等级徽章 / 置顶 / 时间；多条时各条的元信息写进正文，头部只留标题。
         if (multiple)
         {
-            LevelBadge.Visibility = Visibility.Collapsed;
+            LevelBadge.Visibility  = Visibility.Collapsed;
             PinnedBadge.Visibility = Visibility.Collapsed;
-            DateText.Text = string.Empty;
+            DateText.Text          = string.Empty;
         }
         else
         {
@@ -62,13 +68,12 @@ public partial class AnnouncementWindow : Wpf.Ui.Controls.FluentWindow
             DateText.Text = published?.ToLocalTime().ToString("yyyy-MM-dd HH:mm") ?? string.Empty;
         }
 
-        // 正文是 Markdown：标题、列表、引用、代码块、链接都能正常排版
+        // 正文是 Markdown：标题、列表、引用、代码块、链接、表格都能正常排版
         ContentMarkdown.Document = MarkdownRenderer.ToFlowDocument(BuildMarkdown(announcements));
 
         if (isPopup)
         {
-            // 关键：展示即视为「已提醒」，多条一起记，避免下次启动又弹一遍。
-            // 之前只在点按钮时记录，用户直接点右上角关闭就不会记上，导致同一条公告反复弹。
+            // 展示即视为「已提醒」，避免用户直接点关闭后下次启动又弹一遍。
             foreach (var announcement in announcements)
             {
                 SettingsService.MarkAnnouncementPopped(announcement.Id);
@@ -77,10 +82,13 @@ public partial class AnnouncementWindow : Wpf.Ui.Controls.FluentWindow
         }
         else
         {
-            WindowTitleBar.Title  = "公告详情";
             MuteButton.Visibility = Visibility.Collapsed;
             ConfirmButton.Content = "关闭";
         }
+
+        ConfirmButton.IsDefault = true;
+
+        Loaded += (_, _) => ConfirmButton.Focus();
     }
 
     /// <summary>把多条公告拼成一篇 Markdown；单条时直接用原文，不改动排版。</summary>
@@ -115,9 +123,11 @@ public partial class AnnouncementWindow : Wpf.Ui.Controls.FluentWindow
         return sb.ToString();
     }
 
-    private void MuteButton_Click(object sender, RoutedEventArgs e) => Close();
+    private void Close_Click(object sender, RoutedEventArgs e) => Finished?.Invoke();
 
-    private void OkButton_Click(object sender, RoutedEventArgs e) => Close();
+    private void Mute_Click(object sender, RoutedEventArgs e) => Finished?.Invoke();
+
+    private void Confirm_Click(object sender, RoutedEventArgs e) => Finished?.Invoke();
 
     private static Color ToColor(string hex) =>
         ColorConverter.ConvertFromString(hex) is Color color ? color : Colors.Gray;

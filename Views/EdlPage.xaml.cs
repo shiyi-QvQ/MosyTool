@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Media;
 using Microsoft.Win32;
 using Mosytool.Models;
@@ -30,6 +31,21 @@ public partial class EdlPage : Page
     {
         InitializeComponent();
         PartitionGrid.ItemsSource = _partitions;
+
+        // 空表格也会吃掉滚轮，整页就滚不动了；表格自己滚不动时把滚轮交给外层页面。
+        PartitionGrid.PreviewMouseWheel += (_, e) =>
+        {
+            var inner = FindDescendant<ScrollViewer>(PartitionGrid);
+            if (inner != null && inner.ScrollableHeight > 0) return;
+
+            var page = FindScrollableAncestor(PartitionGrid);
+            if (page is null) return;
+
+            // 直接改 offset 比转发路由事件可靠：中间的禁用 ScrollViewer 会吃掉转发的事件。
+            e.Handled = true;
+            page.ScrollToVerticalOffset(page.VerticalOffset - e.Delta);
+        };
+
         // 原生层日志实时流进执行日志（回调来自 Rust 线程，Append 自己会切回 UI 线程）
         QualcommService.NativeLog += OnNativeLog;
         Loaded += (_, _) =>
@@ -37,6 +53,29 @@ public partial class EdlPage : Page
             LoadOptions();
             _ = RefreshStatusAsync();
         };
+    }
+
+    private static T? FindDescendant<T>(DependencyObject root) where T : DependencyObject
+    {
+        if (root is T hit) return hit;
+        for (int i = 0; i < VisualTreeHelper.GetChildrenCount(root); i++)
+        {
+            var found = FindDescendant<T>(VisualTreeHelper.GetChild(root, i));
+            if (found != null) return found;
+        }
+        return null;
+    }
+
+    private static ScrollViewer? FindScrollableAncestor(DependencyObject node)
+    {
+        ScrollViewer? fallback = null;
+        for (var p = VisualTreeHelper.GetParent(node); p != null; p = VisualTreeHelper.GetParent(p))
+        {
+            if (p is not ScrollViewer sv) continue;
+            if (sv.ScrollableHeight > 0) return sv;
+            fallback ??= sv;
+        }
+        return fallback;
     }
 
     private void OnNativeLog(string line) => Append(line);
@@ -165,7 +204,7 @@ public partial class EdlPage : Page
     {
         if (_running)
         {
-            MessageBox.Show("已有操作正在执行，请等待完成或先点击「停止」。", "忙",
+            Dialogs.Show("已有操作正在执行，请等待完成或先点击「停止」。", "忙",
                             MessageBoxButton.OK, MessageBoxImage.Information);
             return -1;
         }
@@ -615,11 +654,11 @@ public partial class EdlPage : Page
     // ---------- 交互辅助 ----------
 
     private static bool Confirm(string message, string title = "操作确认")
-        => MessageBox.Show(message, title, MessageBoxButton.YesNo, MessageBoxImage.Warning)
+        => Dialogs.Show(message, title, MessageBoxButton.YesNo, MessageBoxImage.Warning)
            == MessageBoxResult.Yes;
 
     private static void Warn(string message, string title = "提示")
-        => MessageBox.Show(message, title, MessageBoxButton.OK, MessageBoxImage.Information);
+        => Dialogs.Show(message, title, MessageBoxButton.OK, MessageBoxImage.Information);
 
     private static string? PickOpenFile(string title, string filter = "所有文件|*.*")
     {

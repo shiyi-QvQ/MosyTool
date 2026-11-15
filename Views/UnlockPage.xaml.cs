@@ -170,7 +170,7 @@ public partial class UnlockPage : Page
 
             if (!ok && !silent)
             {
-                MessageBox.Show(
+                Dialogs.Show(
                     message + "\n\n请确认手机已开机、已开启 USB 调试，并在手机上允许本机调试。",
                     "读取槽位失败", MessageBoxButton.OK, MessageBoxImage.Warning);
             }
@@ -213,7 +213,7 @@ public partial class UnlockPage : Page
 
         if (_slot == "B")
         {
-            var answer = MessageBox.Show(
+            var answer = Dialogs.Show(
                 "当前是 B 槽位。\n\n" +
                 "已知问题：B 槽位刷入 ocdt 后，极大概率卡在开机无限重启。\n\n" +
                 "请先切到 A 槽位：\n" +
@@ -226,7 +226,7 @@ public partial class UnlockPage : Page
             return answer == MessageBoxResult.Yes;
         }
 
-        var proceed = MessageBox.Show(
+        var proceed = Dialogs.Show(
             "没能自动读到当前槽位。\n\n" +
             "请先确认手机是 A 槽位（开机后开启 USB 调试，点「检查槽位」；或在手机上运行「查看槽位.bat」）。\n\n" +
             "B 槽位刷 ocdt 可能无限重启。已经确认是 A 槽位了吗？",
@@ -294,7 +294,7 @@ public partial class UnlockPage : Page
         var image = OcdtStockBox.Text;
         if (string.IsNullOrWhiteSpace(image) || !File.Exists(image))
         {
-            MessageBox.Show("没有找到原厂 ocdt 镜像，请先选择。", "缺少镜像",
+            Dialogs.Show("没有找到原厂 ocdt 镜像，请先选择。", "缺少镜像",
                             MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
@@ -304,7 +304,7 @@ public partial class UnlockPage : Page
         {
             if (await RestoreViaFastbootAsync(image)) return;
 
-            var fallback = MessageBox.Show(
+            var fallback = Dialogs.Show(
                 "FastBoot 方式没还原成功。\n\n" +
                 "要改用 MTK 下载模式吗？需要先把手机关机，再按住音量键插线。",
                 "改用下载模式", MessageBoxButton.YesNo, MessageBoxImage.Question);
@@ -325,26 +325,26 @@ public partial class UnlockPage : Page
 
         if (ChkSafety.IsChecked != true)
         {
-            MessageBox.Show("请先勾选「已完成上述准备」。", "还差一步",
+            Dialogs.Show("请先勾选「已完成上述准备」。", "还差一步",
                             MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
 
         if (string.IsNullOrWhiteSpace(image) || !File.Exists(image))
         {
-            MessageBox.Show("没有找到对应的 ocdt 镜像。", "缺少镜像",
+            Dialogs.Show("没有找到对应的 ocdt 镜像。", "缺少镜像",
                             MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
 
         if (string.IsNullOrWhiteSpace(DaDirBox.Text) || !Directory.Exists(DaDirBox.Text))
         {
-            MessageBox.Show("请先选择 DA 目录。", "缺少 DA",
+            Dialogs.Show("请先选择 DA 目录。", "缺少 DA",
                             MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
 
-        var confirm = MessageBox.Show(
+        var confirm = Dialogs.Show(
             $"{_device.Name} · {action}\n\n" +
             "· 会清空手机全部数据\n" +
             "· 可能失去保修与 OTA\n" +
@@ -367,7 +367,7 @@ public partial class UnlockPage : Page
                 if (!ok || info is null)
                 {
                     DeviceInfoText.Text = message;
-                    MessageBox.Show(message, "读取设备失败", MessageBoxButton.OK, MessageBoxImage.Error);
+                    Dialogs.Show(message, "读取设备失败", MessageBoxButton.OK, MessageBoxImage.Error);
                     return;
                 }
 
@@ -376,7 +376,7 @@ public partial class UnlockPage : Page
                 WarnIfChipMismatch(info);
 
                 // 换 DA 就是换会话，设备必须重新从 BROM 开始，否则第二次握手会超时
-                MessageBox.Show(
+                Dialogs.Show(
                     "请拔下数据线，重新按住音量键插线，然后点「确定」继续写入。",
                     "请重新插拔数据线", MessageBoxButton.OK, MessageBoxImage.Information);
             }
@@ -388,7 +388,7 @@ public partial class UnlockPage : Page
             if (!UnlockService.PrepareDa(DaDirBox.Text, _info.HwCode, _info.HwSubCode, daPath, Log, out var daError))
             {
                 Log(daError);
-                MessageBox.Show(daError, "DA 准备失败", MessageBoxButton.OK, MessageBoxImage.Error);
+                Dialogs.Show(daError, "DA 准备失败", MessageBoxButton.OK, MessageBoxImage.Error);
                 return;
             }
 
@@ -401,7 +401,7 @@ public partial class UnlockPage : Page
             if (!flashOk)
             {
                 Log(flashMessage);
-                MessageBox.Show(flashMessage, "写入失败", MessageBoxButton.OK, MessageBoxImage.Error);
+                Dialogs.Show(flashMessage, "写入失败", MessageBoxButton.OK, MessageBoxImage.Error);
                 return;
             }
 
@@ -418,7 +418,7 @@ public partial class UnlockPage : Page
             }
             else
             {
-                MessageBox.Show("原厂 ocdt 已写入，设备正在重启。", "完成",
+                Dialogs.Show("原厂 ocdt 已写入，设备正在重启。", "完成",
                                 MessageBoxButton.OK, MessageBoxImage.Information);
             }
         }
@@ -429,7 +429,7 @@ public partial class UnlockPage : Page
         catch (Exception ex)
         {
             Log("异常：" + ex.Message);
-            MessageBox.Show("操作异常：" + ex.Message, "错误", MessageBoxButton.OK, MessageBoxImage.Error);
+            Dialogs.Show("操作异常：" + ex.Message, "错误", MessageBoxButton.OK, MessageBoxImage.Error);
         }
         finally
         {
@@ -444,7 +444,7 @@ public partial class UnlockPage : Page
     /// <summary>教程 B.9 ~ B.12 必须让用户看到，缺一步都可能导致解锁失败。</summary>
     private void ShowPostUnlockGuide()
     {
-        MessageBox.Show(
+        Dialogs.Show(
             "ocdt 已写入，设备正在重启。\n\n" +
             "接下来这四步必须完成：\n\n" +
             "9. 开机后进 设置 → 关于本机 → 连点版本号 打开开发者选项，勾上 OEM 解锁 与 USB 调试；数据线重插一次，选「文件传输」\n\n" +
@@ -458,7 +458,7 @@ public partial class UnlockPage : Page
     /// <summary>教程 C.1：不打算升 C15 以上就要还原 ocdt，否则可能影响扬声器与摄像头。</summary>
     private async Task AskRestoreOcdtAsync()
     {
-        var answer = MessageBox.Show(
+        var answer = Dialogs.Show(
             "是否还原原厂 ocdt？\n\n" +
             "· 继续用官方 ColorOS 13、不打算升 C15 以上 → 建议还原\n" +
             "· 打算刷橘子 / 澎湃等 C15+ 系统 → 不用还原\n\n" +
@@ -487,7 +487,7 @@ public partial class UnlockPage : Page
     {
         if (string.IsNullOrWhiteSpace(image) || !File.Exists(image))
         {
-            MessageBox.Show("没有找到原厂 ocdt 镜像。", "缺少镜像",
+            Dialogs.Show("没有找到原厂 ocdt 镜像。", "缺少镜像",
                             MessageBoxButton.OK, MessageBoxImage.Warning);
             return false;
         }
@@ -507,7 +507,7 @@ public partial class UnlockPage : Page
 
                 if (!await UnlockService.RebootToBootloaderAsync(Log, token))
                 {
-                    MessageBox.Show(
+                    Dialogs.Show(
                         "没能自动重启到 FastBoot。\n\n" +
                         "请手动运行 EnterFASTBOOT.bat，等手机进入 FastBoot 后再点「还原 ocdt」。",
                         "需要进入 FastBoot", MessageBoxButton.OK, MessageBoxImage.Warning);
@@ -517,7 +517,7 @@ public partial class UnlockPage : Page
                 ProgressText.Text = "等待 FastBoot…";
                 if (!await UnlockService.WaitForFastbootAsync(Log, 45000, token))
                 {
-                    MessageBox.Show(
+                    Dialogs.Show(
                         "没有等到 FastBoot 设备。\n\n请确认手机屏幕出现 FASTBOOT 字样后再试一次。",
                         "没进入 FastBoot", MessageBoxButton.OK, MessageBoxImage.Warning);
                     return false;
@@ -527,7 +527,7 @@ public partial class UnlockPage : Page
             ProgressText.Text = "写入原厂 ocdt…";
             if (!await FastbootService.FlashPartitionAsync("ocdt", image, Log))
             {
-                MessageBox.Show(
+                Dialogs.Show(
                     "fastboot 写入 ocdt 失败。\n\n" +
                     "可以让手机关机，按住音量键插线进下载模式，再点「还原 ocdt」走 MTK 方式。",
                     "还原失败", MessageBoxButton.OK, MessageBoxImage.Warning);
@@ -536,7 +536,7 @@ public partial class UnlockPage : Page
 
             await FastbootService.RunRawAsync("reboot", Log);
             Log("原厂 ocdt 已还原。");
-            MessageBox.Show("原厂 ocdt 已还原，设备正在重启。", "完成",
+            Dialogs.Show("原厂 ocdt 已还原，设备正在重启。", "完成",
                             MessageBoxButton.OK, MessageBoxImage.Information);
             return true;
         }
@@ -571,7 +571,7 @@ public partial class UnlockPage : Page
                 if (!await UnlockService.RebootToBootloaderAsync(Log, token) ||
                     !await UnlockService.WaitForFastbootAsync(Log, 45000, token))
                 {
-                    MessageBox.Show(
+                    Dialogs.Show(
                         "没能自动进入 FastBoot。\n\n" +
                         "请手动运行 EnterFASTBOOT.bat，等手机屏幕出现 FASTBOOT 字样后，再点一次本按钮。",
                         "需要手动进入 FastBoot", MessageBoxButton.OK, MessageBoxImage.Warning);
@@ -584,11 +584,11 @@ public partial class UnlockPage : Page
 
             if (!ok)
             {
-                MessageBox.Show(message, "解锁指令失败", MessageBoxButton.OK, MessageBoxImage.Error);
+                Dialogs.Show(message, "解锁指令失败", MessageBoxButton.OK, MessageBoxImage.Error);
                 return;
             }
 
-            MessageBox.Show(
+            Dialogs.Show(
                 "解锁指令已下发。\n\n" +
                 "手机出现英文提示后，请按一下音量上键，再按一下电源键（5 秒内完成）。\n\n" +
                 "按完点确定，我来重启手机。",
@@ -596,7 +596,7 @@ public partial class UnlockPage : Page
 
             await FastbootService.RunRawAsync("reboot", Log);
 
-            MessageBox.Show(
+            Dialogs.Show(
                 "已发送重启。\n\n" +
                 "开机后出现三行橙色英文，说明 bootloader 解锁成功；\n没有出现就重新做第 10、11 步。",
                 "完成", MessageBoxButton.OK, MessageBoxImage.Information);
@@ -608,7 +608,7 @@ public partial class UnlockPage : Page
         catch (Exception ex)
         {
             Log("解锁异常：" + ex.Message);
-            MessageBox.Show("解锁异常：" + ex.Message, "错误", MessageBoxButton.OK, MessageBoxImage.Error);
+            Dialogs.Show("解锁异常：" + ex.Message, "错误", MessageBoxButton.OK, MessageBoxImage.Error);
         }
         finally
         {

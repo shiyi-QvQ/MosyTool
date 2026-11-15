@@ -151,12 +151,12 @@ public partial class FeedbackPage : Page
     {
         if (TicketList.SelectedItem is not FeedbackTicket ticket)
         {
-            MessageBox.Show(Window.GetWindow(this), "请先选中一条工单。", "提示",
+            Dialogs.Show(Window.GetWindow(this), "请先选中一条工单。", "提示",
                             MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
 
-        if (MessageBox.Show(Window.GetWindow(this),
+        if (Dialogs.Show(Window.GetWindow(this),
                 $"只从本地列表移除工单 {ticket.Id} 的查询记录？\n（服务器上的反馈不会被删除）",
                 "确认移除", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)
             return;
@@ -177,7 +177,7 @@ public partial class FeedbackPage : Page
 
         if (TicketList.SelectedItem is not FeedbackTicket ticket)
         {
-            MessageBox.Show(Window.GetWindow(this), "请先在列表里选中要查询的工单。", "提示",
+            Dialogs.Show(Window.GetWindow(this), "请先在列表里选中要查询的工单。", "提示",
                             MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
@@ -280,7 +280,7 @@ public partial class FeedbackPage : Page
         var content = ReplyBox.Text ?? string.Empty;
         if (!FeedbackService.IsReplyLongEnough(content))
         {
-            MessageBox.Show(Window.GetWindow(this), $"补充内容至少 {FeedbackService.MinReplyLength} 个字。",
+            Dialogs.Show(Window.GetWindow(this), $"补充内容至少 {FeedbackService.MinReplyLength} 个字。",
                             "提示", MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
@@ -309,7 +309,7 @@ public partial class FeedbackPage : Page
         }
         catch (ApiException ex)
         {
-            MessageBox.Show(Window.GetWindow(this),
+            Dialogs.Show(Window.GetWindow(this),
                 ex.IsTicketClosed
                     ? "该工单已经结单，无法再补充说明。请重新提交一条新反馈。"
                     : ex.Message,

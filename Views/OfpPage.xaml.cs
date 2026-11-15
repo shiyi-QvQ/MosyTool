@@ -41,7 +41,7 @@ public partial class OfpPage : Page
     {
         if (string.IsNullOrEmpty(_ofpPath) || !File.Exists(_ofpPath))
         {
-            MessageBox.Show("请先选择有效的 OFP 文件。", "提示", MessageBoxButton.OK, MessageBoxImage.Warning);
+            Dialogs.Show("请先选择有效的 OFP 文件。", "提示", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
 
@@ -66,7 +66,7 @@ public partial class OfpPage : Page
         catch (Exception ex)
         {
             Log($"解析失败：{ex.Message}");
-            MessageBox.Show("解析失败：" + ex.Message, "错误", MessageBoxButton.OK, MessageBoxImage.Error);
+            Dialogs.Show("解析失败：" + ex.Message, "错误", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
@@ -131,7 +131,7 @@ public partial class OfpPage : Page
         var selected = _image.Entries.Where(x => x.IsSelected).ToList();
         if (selected.Count == 0)
         {
-            MessageBox.Show("请先勾选要解包的条目。", "提示", MessageBoxButton.OK, MessageBoxImage.Warning);
+            Dialogs.Show("请先勾选要解包的条目。", "提示", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
         await ExtractAsync(selected);
@@ -141,14 +141,14 @@ public partial class OfpPage : Page
     {
         if (_image == null)
         {
-            MessageBox.Show("请先解析 OFP 文件。", "提示", MessageBoxButton.OK, MessageBoxImage.Warning);
+            Dialogs.Show("请先解析 OFP 文件。", "提示", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
 
         var outputDir = OutputDirBox.Text?.Trim();
         if (string.IsNullOrEmpty(outputDir))
         {
-            MessageBox.Show("请先选择输出目录。", "提示", MessageBoxButton.OK, MessageBoxImage.Warning);
+            Dialogs.Show("请先选择输出目录。", "提示", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
 
@@ -170,13 +170,13 @@ public partial class OfpPage : Page
 
             ProgressBar.Value = 100;
             ProgressText.Text = "解包完成";
-            MessageBox.Show($"解包完成，共 {entries.Count} 个条目。", "完成",
+            Dialogs.Show($"解包完成，共 {entries.Count} 个条目。", "完成",
                             MessageBoxButton.OK, MessageBoxImage.Information);
         }
         catch (Exception ex)
         {
             Log($"解包失败：{ex.Message}");
-            MessageBox.Show("解包失败：" + ex.Message, "错误", MessageBoxButton.OK, MessageBoxImage.Error);
+            Dialogs.Show("解包失败：" + ex.Message, "错误", MessageBoxButton.OK, MessageBoxImage.Error);
         }
         finally
         {

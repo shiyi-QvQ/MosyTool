@@ -146,6 +146,14 @@ public static class ThemeService
         SetBrush("NavigationViewContentBackground",      "#99FFFFFF");
         SetBrush("NavigationViewContentGridBorderBrush", "#142C3E52");
 
+        SetBrush("Mt.WindowStrokeBrush",                 "#2E2C3E52");
+        SetBrush("Mt.CaptionHoverBrush",                 "#0F1A2430");
+        SetBrush("Mt.CaptionPressedBrush",               "#1F1A2430");
+        SetBrush("Mt.Button.SecondaryBackgroundBrush",   "#E8FFFFFF");
+        SetBrush("Mt.Button.PrimaryForegroundBrush",     "#FFFFFFFF");
+        SetBrush("Mt.Button.HoverOverlayBrush",          "#12000000");
+        SetBrush("Mt.Button.PressedOverlayBrush",        "#22000000");
+
         SetBrush("SlimScrollBarThumbFill",               "#59000000");
         SetBrush("SlimScrollBarThumbFillHover",          "#8C000000");
         SetBrush("SlimScrollBarThumbFillDrag",           "#B3000000");
@@ -190,6 +198,14 @@ public static class ThemeService
 
         SetBrush("NavigationViewContentBackground",      "#99101419");
         SetBrush("NavigationViewContentGridBorderBrush", "#1FFFFFFF");
+
+        SetBrush("Mt.WindowStrokeBrush",                 "#33FFFFFF");
+        SetBrush("Mt.CaptionHoverBrush",                 "#14FFFFFF");
+        SetBrush("Mt.CaptionPressedBrush",               "#24FFFFFF");
+        SetBrush("Mt.Button.SecondaryBackgroundBrush",   "#1AFFFFFF");
+        SetBrush("Mt.Button.PrimaryForegroundBrush",     "#FFFFFFFF");
+        SetBrush("Mt.Button.HoverOverlayBrush",          "#1CFFFFFF");
+        SetBrush("Mt.Button.PressedOverlayBrush",        "#2EFFFFFF");
 
         SetBrush("SlimScrollBarThumbFill",               "#5CFFFFFF");
         SetBrush("SlimScrollBarThumbFillHover",          "#8CFFFFFF");

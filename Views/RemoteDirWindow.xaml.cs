@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
+using Mosytool.Controls;
 using Mosytool.Services;
 using Wpf.Ui.Controls;
 
@@ -14,7 +15,7 @@ namespace Mosytool.Views;
 ///
 /// 只列文件夹——推送目标本来就只能是目录；文件只在状态行里报个数，免得列表被塞满。
 /// </summary>
-public partial class RemoteDirWindow : FluentWindow
+public partial class RemoteDirWindow : MtWindow
 {
     /// <summary>常用目录快捷入口，和推送页面上的保持一致。</summary>
     private static readonly (string Label, string Path)[] Shortcuts =

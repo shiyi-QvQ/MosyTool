@@ -1,17 +1,24 @@
 using System;
 using System.Diagnostics;
+using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
 using System.Windows.Media;
+using System.Windows.Media.Imaging;
 using Markdig;
+using Markdig.Extensions.TaskLists;
 using Markdig.Helpers;
 using Markdig.Syntax;
 using Markdig.Syntax.Inlines;
 
 using MdBlock = Markdig.Syntax.Block;
 using MdInline = Markdig.Syntax.Inlines.Inline;
+using MdTable = Markdig.Extensions.Tables.Table;
+using MdTableCell = Markdig.Extensions.Tables.TableCell;
+using MdTableRow = Markdig.Extensions.Tables.TableRow;
 using WpfBlock = System.Windows.Documents.Block;
 using WpfInline = System.Windows.Documents.Inline;
 
@@ -22,7 +29,26 @@ public static class MarkdownRenderer
     private static readonly MarkdownPipeline Pipeline = new MarkdownPipelineBuilder()
         .UseEmphasisExtras()
         .UseAutoLinks()
+        .UsePipeTables()
+        .UseTaskLists()
         .Build();
+
+    /// <summary>
+    /// 后台公告里常见这种畸形链接：
+    /// <c>[文字](https://x.com"提示语" target="_blank")</c>——
+    /// URL 后面直接跟了引号和 HTML 属性，Markdig 解析不成链接，整段原样吐出来。
+    /// 这里先把「URL 之后的多余尾巴」剪掉，让它退回标准写法。
+    /// </summary>
+    private static readonly Regex MalformedLink = new(
+        "\\]\\(\\s*(?<url>[^()\\s\"']+)(?:\\s+[^()]*)?\\)",
+        RegexOptions.Compiled);
+
+    private static string Sanitize(string? markdown)
+    {
+        if (string.IsNullOrEmpty(markdown)) return string.Empty;
+
+        return MalformedLink.Replace(markdown, "](${url})");
+    }
 
     private static readonly FontFamily MonoFont = new("Cascadia Mono, Consolas, Courier New");
 
@@ -44,7 +70,7 @@ public static class MarkdownRenderer
 
         if (string.IsNullOrWhiteSpace(markdown)) return document;
 
-        foreach (var block in Markdig.Markdown.Parse(markdown, Pipeline))
+        foreach (var block in Markdig.Markdown.Parse(Sanitize(markdown), Pipeline))
             AppendBlock(document.Blocks, block);
 
         return document;
@@ -55,7 +81,7 @@ public static class MarkdownRenderer
         if (string.IsNullOrWhiteSpace(markdown)) return string.Empty;
 
         var builder = new StringBuilder();
-        foreach (var block in Markdig.Markdown.Parse(markdown, Pipeline))
+        foreach (var block in Markdig.Markdown.Parse(Sanitize(markdown), Pipeline))
             AppendPlainBlock(builder, block);
 
         return Collapse(builder.ToString());
@@ -72,7 +98,7 @@ public static class MarkdownRenderer
 
         if (!string.IsNullOrWhiteSpace(markdown))
         {
-            var document  = Markdig.Markdown.Parse(markdown, Pipeline);
+            var document  = Markdig.Markdown.Parse(Sanitize(markdown), Pipeline);
             var linesLeft = SummaryMaxLines;
             var index     = 0;
 
@@ -269,6 +295,10 @@ public static class MarkdownRenderer
                 target.Add(BuildDivider());
                 break;
 
+            case MdTable table:
+                target.Add(BuildTable(table));
+                break;
+
             case HtmlBlock html:
                 var htmlText = LinesToText(html.Lines);
                 if (htmlText.Length > 0) target.Add(new Paragraph(new Run(htmlText)));
@@ -386,6 +416,63 @@ public static class MarkdownRenderer
         return paragraph;
     }
 
+    /// <summary>管道表格：每行等宽分栏，单元格 1px 描边，表头加粗。</summary>
+    private static WpfBlock BuildTable(MdTable table)
+    {
+        var stroke = Application.Current?.TryFindResource("CardStrokeColorDefaultBrush") as Brush
+                     ?? new SolidColorBrush(Color.FromArgb(0x33, 0, 0, 0));
+
+        var columnCount = table.OfType<MdTableRow>().Select(r => r.Count).DefaultIfEmpty(0).Max();
+        if (columnCount == 0) return BuildDivider();
+
+        var result = new System.Windows.Documents.Table
+        {
+            CellSpacing = 0,
+            Margin      = new Thickness(0, 2, 0, 12),
+        };
+
+        for (var i = 0; i < columnCount; i++)
+            result.Columns.Add(new TableColumn { Width = new GridLength(1, GridUnitType.Star) });
+
+        var group = new TableRowGroup();
+        result.RowGroups.Add(group);
+
+        foreach (var row in table.OfType<MdTableRow>())
+        {
+            var targetRow = new System.Windows.Documents.TableRow();
+            if (row.IsHeader) targetRow.FontWeight = FontWeights.SemiBold;
+
+            foreach (var sourceCell in row.OfType<MdTableCell>())
+            {
+                var cell = new System.Windows.Documents.TableCell
+                {
+                    Padding         = new Thickness(8, 6, 8, 6),
+                    BorderBrush     = stroke,
+                    BorderThickness = new Thickness(1),
+                    ColumnSpan      = Math.Max(1, sourceCell.ColumnSpan),
+                };
+
+                if (row.IsHeader)
+                    PaintFill(cell, "ControlFillColorSecondaryBrush", Color.FromArgb(0x14, 0, 0, 0));
+
+                foreach (var block in sourceCell)
+                {
+                    if (block is not ParagraphBlock paragraph) continue;
+
+                    var text = new Paragraph { Margin = new Thickness(0) };
+                    AppendInlines(text.Inlines, paragraph.Inline);
+                    cell.Blocks.Add(text);
+                }
+
+                targetRow.Cells.Add(cell);
+            }
+
+            group.Rows.Add(targetRow);
+        }
+
+        return result;
+    }
+
 
     private static void AppendInlines(InlineCollection target, ContainerInline? container, bool interactiveLinks = true)
     {
@@ -422,6 +509,10 @@ public static class MarkdownRenderer
                 case HtmlInline html:
                     var plain = StripTags(html.Tag);
                     if (plain.Length > 0) target.Add(new Run(plain));
+                    break;
+
+                case TaskList task:
+                    target.Add(new Run(task.Checked ? "☑ " : "☐ "));
                     break;
 
                 case ContainerInline nested:
@@ -480,11 +571,46 @@ public static class MarkdownRenderer
 
         if (link.IsImage)
         {
+            // 图片能取到就直接嵌进正文；取不到（外链失效/非 http）退回一条「查看图片」链接。
+            if (BuildImage(url) is { } image) return image;
+
             if (string.IsNullOrWhiteSpace(text)) text = "查看图片";
             return BuildHyperlink(url, text, interactive);
         }
 
         return BuildHyperlink(url, string.IsNullOrWhiteSpace(text) ? (url ?? string.Empty) : text, interactive);
+    }
+
+    private static WpfInline? BuildImage(string? url)
+    {
+        if (string.IsNullOrWhiteSpace(url)) return null;
+
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri)) return null;
+        if (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps) return null;
+
+        try
+        {
+            var bitmap = new BitmapImage();
+            bitmap.BeginInit();
+            bitmap.UriSource   = uri;
+            bitmap.CacheOption = BitmapCacheOption.OnLoad;
+            bitmap.EndInit();
+
+            var image = new Image
+            {
+                Source   = bitmap,
+                MaxWidth = 520,
+                Stretch  = Stretch.Uniform,
+                Margin   = new Thickness(0, 4, 0, 4),
+            };
+
+            RenderOptions.SetBitmapScalingMode(image, BitmapScalingMode.HighQuality);
+            return new InlineUIContainer(image);
+        }
+        catch
+        {
+            return null;
+        }
     }
 
     private static WpfInline BuildHyperlink(string? url, string text, bool interactive = true)
@@ -504,6 +630,15 @@ public static class MarkdownRenderer
         };
 
         Paint(hyperlink, "AccentTextFillColorPrimaryBrush", Color.FromRgb(0x00, 0x5F, 0xB8));
+
+        // 链接是正文里唯一的可点区域，按下时压暗一档，给一点点击反馈
+        hyperlink.MouseLeftButtonDown += (_, _) =>
+        {
+            if (hyperlink.Foreground is SolidColorBrush brush)
+                hyperlink.Foreground = new SolidColorBrush(brush.Color) { Opacity = 0.5 };
+        };
+        hyperlink.MouseLeftButtonUp += (_, _) => Paint(hyperlink, "AccentTextFillColorPrimaryBrush", Color.FromRgb(0x00, 0x5F, 0xB8));
+        hyperlink.MouseLeave += (_, _) => Paint(hyperlink, "AccentTextFillColorPrimaryBrush", Color.FromRgb(0x00, 0x5F, 0xB8));
 
         if (!string.IsNullOrWhiteSpace(url))
             hyperlink.Click += (_, _) => OpenUrl(url);

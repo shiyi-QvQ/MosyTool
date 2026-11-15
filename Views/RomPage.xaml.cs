@@ -10,6 +10,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using Mosytool.Models.Api;
+using Mosytool.Services;
 using Mosytool.Services.Api;
 
 namespace Mosytool.Views;
@@ -246,7 +247,7 @@ public partial class RomPage : Page
 
         if (_downloadCts is not null)
         {
-            MessageBox.Show(Window.GetWindow(this), "已有下载在进行中，请先等待或取消。",
+            Dialogs.Show(Window.GetWindow(this), "已有下载在进行中，请先等待或取消。",
                             "提示", MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
@@ -305,7 +306,7 @@ public partial class RomPage : Page
 
             // 直链过期时给一条官方页兜底路径。
             if (row.Source.DownloadUrl is { Length: > 0 } page && ex.Message.Contains("下载失败"))
-                if (MessageBox.Show(Window.GetWindow(this),
+                if (Dialogs.Show(Window.GetWindow(this),
                         $"{ex.Message}\n\n是否改用浏览器打开官方下载页？", "下载失败",
                         MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes)
                     OpenUrl(page);

@@ -37,9 +37,16 @@ public partial class MtkPage : Page
     /// <summary>单次刷新最多写入的行数，避免一次灌太多造成掉帧。</summary>
     private const int LogFlushBatch = 256;
 
+    /// <summary>当前是否处于窄窗口布局（日志挪到底部）。null 表示还没算过。</summary>
+    private bool? _narrowLayout;
+
     public MtkPage()
     {
         InitializeComponent();
+
+        // 窗口能被拖到 1020×680（侧边栏展开时内容区只剩 ~750px），
+        // 三栏并排必被裁掉，所以按宽度在「右侧日志」和「底部日志」之间切换。
+        SizeChanged += (_, e) => ApplyResponsiveLayout(e.NewSize.Width);
         PartitionGrid.ItemsSource = _partitions;
 
         // NativeLog 是静态事件：只订阅不退订的话，页面每被导航到一次就多留一个处理器，
@@ -66,6 +73,35 @@ public partial class MtkPage : Page
     }
 
     private void OnNativeLog(string line) => Append(line);
+
+    /// <summary>
+    /// 按页面宽度切换日志位置。宽窗（侧边栏收起或窗口拉大）时日志在右栏；
+    /// 窄窗时日志落到操作区下方，避免右栏被挤到窗口外面看不见。
+    /// </summary>
+    private void ApplyResponsiveLayout(double width)
+    {
+        // 三栏最小总宽 214+340+16+250 = 820，加上页面左右 24 的边距约需 870。
+        const double NarrowThreshold = 880;
+
+        bool narrow = width < NarrowThreshold;
+        if (_narrowLayout == narrow) return;
+        _narrowLayout = narrow;
+
+        LogRow.Height = narrow ? GridLength.Auto : new GridLength(0);
+
+        // 窄窗要把日志列彻底收掉：只改 Width 不够，MinWidth 还会把列撑住
+        LogColumn.MinWidth = narrow ? 0 : 250;
+        LogColumn.MaxWidth = narrow ? double.PositiveInfinity : 420;
+        LogColumn.Width    = narrow ? new GridLength(0) : new GridLength(0.9, GridUnitType.Star);
+        GapColumn.Width    = narrow ? new GridLength(0) : new GridLength(16);
+
+        Grid.SetRow(LogCard, narrow ? 2 : 1);
+        Grid.SetColumn(LogCard, narrow ? 0 : 3);
+        Grid.SetColumnSpan(LogCard, narrow ? 4 : 1);
+        LogCard.Height = narrow ? 180 : double.NaN;
+        LogCard.Margin = narrow ? new Thickness(0, 12, 0, 0) : new Thickness(0);
+        LogHead.Visibility = narrow ? Visibility.Collapsed : Visibility.Visible;
+    }
 
     // ---------- 连接选项 ----------
 
@@ -178,7 +214,7 @@ public partial class MtkPage : Page
     {
         if (_running)
         {
-            MessageBox.Show("已有操作正在执行，请等待完成或先点击「停止」。", "忙",
+            Dialogs.Show("已有操作正在执行，请等待完成或先点击「停止」。", "忙",
                             MessageBoxButton.OK, MessageBoxImage.Information);
             return -1;
         }
@@ -318,11 +354,11 @@ public partial class MtkPage : Page
     // ---------- 交互辅助 ----------
 
     private static bool Confirm(string message, string title = "危险操作确认")
-        => MessageBox.Show(message, title, MessageBoxButton.YesNo, MessageBoxImage.Warning)
+        => Dialogs.Show(message, title, MessageBoxButton.YesNo, MessageBoxImage.Warning)
            == MessageBoxResult.Yes;
 
     private static void Warn(string message, string title = "提示")
-        => MessageBox.Show(message, title, MessageBoxButton.OK, MessageBoxImage.Information);
+        => Dialogs.Show(message, title, MessageBoxButton.OK, MessageBoxImage.Information);
 
     private static string? PickOpenFile(string title, string filter = "所有文件|*.*")
     {

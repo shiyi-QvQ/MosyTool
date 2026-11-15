@@ -42,7 +42,7 @@ public partial class PayloadPage : Page
     {
         if (string.IsNullOrEmpty(_payloadPath) || !File.Exists(_payloadPath))
         {
-            MessageBox.Show("请先选择有效的 payload.bin 文件。", "提示", MessageBoxButton.OK, MessageBoxImage.Warning);
+            Dialogs.Show("请先选择有效的 payload.bin 文件。", "提示", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
 
@@ -71,7 +71,7 @@ public partial class PayloadPage : Page
         catch (Exception ex)
         {
             Log($"解析失败: {ex.Message}");
-            MessageBox.Show("解析失败: " + ex.Message, "错误", MessageBoxButton.OK, MessageBoxImage.Error);
+            Dialogs.Show("解析失败: " + ex.Message, "错误", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
@@ -97,7 +97,7 @@ public partial class PayloadPage : Page
         var selected = _partitions.Where(p => p.IsSelected).ToList();
         if (selected.Count == 0)
         {
-            MessageBox.Show("请先勾选要解包的分区。", "提示", MessageBoxButton.OK, MessageBoxImage.Warning);
+            Dialogs.Show("请先勾选要解包的分区。", "提示", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
         await ExtractAsync(selected);
@@ -117,14 +117,14 @@ public partial class PayloadPage : Page
     {
         if (string.IsNullOrEmpty(_payloadPath) || !File.Exists(_payloadPath))
         {
-            MessageBox.Show("请先选择并解析 payload.bin。", "提示", MessageBoxButton.OK, MessageBoxImage.Warning);
+            Dialogs.Show("请先选择并解析 payload.bin。", "提示", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
 
         var outputDir = OutputDirBox.Text?.Trim();
         if (string.IsNullOrEmpty(outputDir))
         {
-            MessageBox.Show("请先选择输出目录。", "提示", MessageBoxButton.OK, MessageBoxImage.Warning);
+            Dialogs.Show("请先选择输出目录。", "提示", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
 
@@ -135,7 +135,7 @@ public partial class PayloadPage : Page
 
         if (todo.Count == 0)
         {
-            MessageBox.Show("所选分区都不支持直接解包（需要增量源镜像）。", "提示", MessageBoxButton.OK, MessageBoxImage.Warning);
+            Dialogs.Show("所选分区都不支持直接解包（需要增量源镜像）。", "提示", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
 
@@ -179,7 +179,7 @@ public partial class PayloadPage : Page
             ProgressBar.Value = 100;
             ProgressText.Text = "解包完成";
 
-            MessageBox.Show($"解包完成：成功 {success}/{todo.Count} 个分区。", "完成",
+            Dialogs.Show($"解包完成：成功 {success}/{todo.Count} 个分区。", "完成",
                             MessageBoxButton.OK, MessageBoxImage.Information);
         }
         finally

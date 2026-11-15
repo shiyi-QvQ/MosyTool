@@ -1,4 +1,5 @@
-<Page x:Class="Mosytool.Views.EdlPage"
+<Page
+      xmlns:controls="clr-namespace:Mosytool.Controls" x:Class="Mosytool.Views.EdlPage"
       xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
       xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
@@ -28,19 +29,17 @@
         <Style TargetType="{x:Type ScrollBar}" BasedOn="{StaticResource SlimScrollBar}"/>
     </Page.Resources>
 
-    <Grid Margin="32,26,32,22">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*" MinHeight="220"/>
-            <RowDefinition Height="Auto"/>
-        </Grid.RowDefinitions>
+    <!-- 这一页有三段纵向内容（状态区 / 分区表 / 日志），最小窗口下三段加起来放不下。
+         整页做成可滚动，保证任何高度下都能滚到日志底部，而不是被窗口裁掉。 -->
+    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+        <StackPanel Margin="32,26,32,22">
 
         <!-- ==================== 顶部状态区 ==================== -->
-        <StackPanel Grid.Row="0" Margin="0,0,0,14">
+        <StackPanel Margin="0,0,0,14">
             <TextBlock Text="高通 EDL 工具" FontSize="24" FontWeight="SemiBold"
                        Foreground="{DynamicResource TextFillColorPrimaryBrush}"/>
 
-            <Border Background="{DynamicResource ControlFillColorSecondaryBrush}"
+            <controls:SquircleBorder Background="{DynamicResource ControlFillColorSecondaryBrush}"
                     CornerRadius="8" Padding="14,12" Margin="0,12,0,10">
                 <Grid>
                     <Grid.ColumnDefinitions>
@@ -66,7 +65,7 @@
                                Margin="12,0,0,0" Padding="12,4" VerticalAlignment="Center"
                                Content="刷新状态" Click="RefreshButton_Click"/>
                 </Grid>
-            </Border>
+            </controls:SquircleBorder>
 
             <Expander x:Name="LoaderExpander" Margin="0,0,0,8"
                       Header="装载器文件（firehose programmer，必填）"
@@ -104,10 +103,10 @@
         </StackPanel>
 
         <!-- ==================== 主功能区 ==================== -->
-        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto"
+        <ScrollViewer VerticalScrollBarVisibility="Disabled"
                       HorizontalScrollBarVisibility="Disabled" Padding="0,0,8,0">
             <StackPanel>
-                <Border Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                <controls:SquircleBorder Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
                         BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
                         BorderThickness="1" CornerRadius="12" Padding="20" Margin="0,0,0,16">
                     <StackPanel>
@@ -185,9 +184,9 @@
                             <Run Text="写回需指定一个存有「分区名.img」的镜像目录；擦除会把选中的分区整段清零。"/>
                         </TextBlock>
                     </StackPanel>
-                </Border>
+                </controls:SquircleBorder>
 
-                <Border Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                <controls:SquircleBorder Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
                         BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
                         BorderThickness="1" CornerRadius="12" Padding="20" Margin="0">
                     <StackPanel>
@@ -207,12 +206,12 @@
                         <ui:Button x:Name="ResetButton" Appearance="Primary" HorizontalAlignment="Left"
                                    Padding="14,5" Content="复位设备（退出 EDL）" Click="Reset_Click"/>
                     </StackPanel>
-                </Border>
+                </controls:SquircleBorder>
             </StackPanel>
         </ScrollViewer>
 
         <!-- ==================== 执行日志（可折叠） ==================== -->
-        <Border Grid.Row="2" Margin="0,14,0,0" MinHeight="54"
+        <controls:SquircleBorder Margin="0,14,0,0" MinHeight="54"
                 Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
                 BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
                 BorderThickness="1" CornerRadius="10" Padding="16,10">
@@ -259,6 +258,7 @@
                              Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                              VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"/>
             </Expander>
-        </Border>
-    </Grid>
+        </controls:SquircleBorder>
+        </StackPanel>
+    </ScrollViewer>
 </Page>

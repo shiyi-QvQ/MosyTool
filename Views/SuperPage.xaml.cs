@@ -107,14 +107,14 @@ public partial class SuperPage : Page
     {
         if (_buildItems.Count == 0)
         {
-            MessageBox.Show("请先添加要合包的分区镜像。", "提示", MessageBoxButton.OK, MessageBoxImage.Warning);
+            Dialogs.Show("请先添加要合包的分区镜像。", "提示", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
 
         var output = BuildOutputBox.Text?.Trim();
         if (string.IsNullOrEmpty(output))
         {
-            MessageBox.Show("请先指定输出文件（super.img）。", "提示", MessageBoxButton.OK, MessageBoxImage.Warning);
+            Dialogs.Show("请先指定输出文件（super.img）。", "提示", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
 
@@ -124,7 +124,7 @@ public partial class SuperPage : Page
         {
             if (!long.TryParse(sizeText, out var mb) || mb <= 0)
             {
-                MessageBox.Show("总大小请填写正整数（单位 MB），或留空。", "提示", MessageBoxButton.OK, MessageBoxImage.Warning);
+                Dialogs.Show("总大小请填写正整数（单位 MB），或留空。", "提示", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
             deviceSize = mb * 1024L * 1024L;
@@ -162,13 +162,13 @@ public partial class SuperPage : Page
 
             Log($"合包完成：{result.PartitionCount} 个分区，super 大小 {SuperService.FormatSize(result.DeviceSize)}，" +
                 $"数据区 {SuperService.FormatSize(result.DataSize)}{(result.UsedTemplate ? "，已套用模板" : "")}");
-            MessageBox.Show($"合包完成：{result.PartitionCount} 个分区，输出大小 {SuperService.FormatSize(result.DeviceSize)}。",
+            Dialogs.Show($"合包完成：{result.PartitionCount} 个分区，输出大小 {SuperService.FormatSize(result.DeviceSize)}。",
                             "完成", MessageBoxButton.OK, MessageBoxImage.Information);
         }
         catch (Exception ex)
         {
             Log($"合包失败：{ex.Message}");
-            MessageBox.Show("合包失败：" + ex.Message, "错误", MessageBoxButton.OK, MessageBoxImage.Error);
+            Dialogs.Show("合包失败：" + ex.Message, "错误", MessageBoxButton.OK, MessageBoxImage.Error);
         }
         finally
         {
@@ -198,7 +198,7 @@ public partial class SuperPage : Page
         var path = SuperPathBox.Text?.Trim();
         if (string.IsNullOrEmpty(path) || !File.Exists(path))
         {
-            MessageBox.Show("请先选择有效的 super.img 文件。", "提示", MessageBoxButton.OK, MessageBoxImage.Warning);
+            Dialogs.Show("请先选择有效的 super.img 文件。", "提示", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
 
@@ -228,7 +228,7 @@ public partial class SuperPage : Page
         catch (Exception ex)
         {
             Log($"解析失败：{ex.Message}");
-            MessageBox.Show("解析失败：" + ex.Message, "错误", MessageBoxButton.OK, MessageBoxImage.Error);
+            Dialogs.Show("解析失败：" + ex.Message, "错误", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
@@ -260,21 +260,21 @@ public partial class SuperPage : Page
     {
         if (_superInfo == null || _superPath.Length == 0)
         {
-            MessageBox.Show("请先解析 super.img。", "提示", MessageBoxButton.OK, MessageBoxImage.Warning);
+            Dialogs.Show("请先解析 super.img。", "提示", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
 
         var outputDir = ExtractDirBox.Text?.Trim();
         if (string.IsNullOrEmpty(outputDir))
         {
-            MessageBox.Show("请先选择输出目录。", "提示", MessageBoxButton.OK, MessageBoxImage.Warning);
+            Dialogs.Show("请先选择输出目录。", "提示", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
 
         var todo = _superInfo.Partitions.Where(p => p.IsSelected).ToList();
         if (todo.Count == 0)
         {
-            MessageBox.Show("请先勾选要提取的分区。", "提示", MessageBoxButton.OK, MessageBoxImage.Warning);
+            Dialogs.Show("请先勾选要提取的分区。", "提示", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
 
@@ -314,7 +314,7 @@ public partial class SuperPage : Page
             ProgressBar.Value = 100;
             ProgressText.Text = "提取完成";
             Log($"提取结束：成功 {success}/{todo.Count}。");
-            MessageBox.Show($"提取完成：成功 {success}/{todo.Count} 个分区。", "完成",
+            Dialogs.Show($"提取完成：成功 {success}/{todo.Count} 个分区。", "完成",
                             MessageBoxButton.OK, MessageBoxImage.Information);
         }
         finally
@@ -351,7 +351,7 @@ public partial class SuperPage : Page
     {
         if (_superInfo == null || _superPath.Length == 0)
         {
-            MessageBox.Show("请先解析 super.img。", "提示", MessageBoxButton.OK, MessageBoxImage.Warning);
+            Dialogs.Show("请先解析 super.img。", "提示", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
 
@@ -360,23 +360,23 @@ public partial class SuperPage : Page
 
         if (string.IsNullOrEmpty(sourceName))
         {
-            MessageBox.Show("请选择 super 内的分区。", "提示", MessageBoxButton.OK, MessageBoxImage.Warning);
+            Dialogs.Show("请选择 super 内的分区。", "提示", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
         if (string.IsNullOrEmpty(targetName))
         {
-            MessageBox.Show("请选择或输入目标分区名。", "提示", MessageBoxButton.OK, MessageBoxImage.Warning);
+            Dialogs.Show("请选择或输入目标分区名。", "提示", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
 
         var part = _superInfo.Find(sourceName);
         if (part == null)
         {
-            MessageBox.Show($"super 中没有名为 {sourceName} 的分区。", "提示", MessageBoxButton.OK, MessageBoxImage.Warning);
+            Dialogs.Show($"super 中没有名为 {sourceName} 的分区。", "提示", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
 
-        var confirm = MessageBox.Show(
+        var confirm = Dialogs.Show(
             $"将从 super 提取分区 {sourceName}（{SuperService.FormatSize(part.Size)}）\n并刷入设备分区 {targetName}。\n\n确定继续吗？",
             "确认刷入", MessageBoxButton.OKCancel, MessageBoxImage.Question);
         if (confirm != MessageBoxResult.OK) return;
@@ -411,12 +411,12 @@ public partial class SuperPage : Page
                 ProgressBar.Value = 100;
                 ProgressText.Text = "刷入完成";
                 Log("刷入成功！");
-                MessageBox.Show("刷入完成。", "完成", MessageBoxButton.OK, MessageBoxImage.Information);
+                Dialogs.Show("刷入完成。", "完成", MessageBoxButton.OK, MessageBoxImage.Information);
             }
             else
             {
                 Log("刷入失败。");
-                MessageBox.Show(
+                Dialogs.Show(
                     "刷入失败，请查看日志。\n\n常见原因：\n1. 目标分区名不对（A/B 设备可能是 system_a）\n2. 设备不在 fastboot 模式\n3. 分区大小不足（super 内分区比设备分区大）",
                     "刷入失败", MessageBoxButton.OK, MessageBoxImage.Error);
             }
@@ -424,7 +424,7 @@ public partial class SuperPage : Page
         catch (Exception ex)
         {
             Log($"操作失败：{ex.Message}");
-            MessageBox.Show("操作失败：" + ex.Message, "错误", MessageBoxButton.OK, MessageBoxImage.Error);
+            Dialogs.Show("操作失败：" + ex.Message, "错误", MessageBoxButton.OK, MessageBoxImage.Error);
         }
         finally
         {
@@ -472,7 +472,7 @@ public partial class SuperPage : Page
         catch (Exception ex)
         {
             Log($"生成失败：{ex.Message}");
-            MessageBox.Show("生成失败：" + ex.Message, "错误", MessageBoxButton.OK, MessageBoxImage.Error);
+            Dialogs.Show("生成失败：" + ex.Message, "错误", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
@@ -502,13 +502,13 @@ public partial class SuperPage : Page
             uint flags = AvbService.Patch(_vbmetaPath, true, true);
             ShowVbmetaInfo();
             Log($"已写入关闭校验位，新的 flags = {flags}。");
-            MessageBox.Show("已关闭 vbmeta 的 verity 与 verification 校验。\n刷入该 vbmeta 后即可跳过 AVB 校验。",
+            Dialogs.Show("已关闭 vbmeta 的 verity 与 verification 校验。\n刷入该 vbmeta 后即可跳过 AVB 校验。",
                             "完成", MessageBoxButton.OK, MessageBoxImage.Information);
         }
         catch (Exception ex)
         {
             Log($"修改失败：{ex.Message}");
-            MessageBox.Show("修改失败：" + ex.Message, "错误", MessageBoxButton.OK, MessageBoxImage.Error);
+            Dialogs.Show("修改失败：" + ex.Message, "错误", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
@@ -525,7 +525,7 @@ public partial class SuperPage : Page
         catch (Exception ex)
         {
             Log($"恢复失败：{ex.Message}");
-            MessageBox.Show("恢复失败：" + ex.Message, "错误", MessageBoxButton.OK, MessageBoxImage.Error);
+            Dialogs.Show("恢复失败：" + ex.Message, "错误", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
@@ -536,7 +536,7 @@ public partial class SuperPage : Page
         var partition = VbmetaPartitionCombo.Text?.Trim();
         if (string.IsNullOrEmpty(partition)) partition = "vbmeta";
 
-        var confirm = MessageBox.Show(
+        var confirm = Dialogs.Show(
             $"将刷入 {partition} 分区：{Path.GetFileName(_vbmetaPath)}\n并附带 --disable-verity --disable-verification 参数。\n\n确定继续吗？",
             "确认刷入", MessageBoxButton.OKCancel, MessageBoxImage.Question);
         if (confirm != MessageBoxResult.OK) return;
@@ -548,12 +548,12 @@ public partial class SuperPage : Page
             if (ok)
             {
                 Log("vbmeta 刷入成功，AVB 校验已关闭。");
-                MessageBox.Show("刷入完成，AVB 校验已关闭。", "完成", MessageBoxButton.OK, MessageBoxImage.Information);
+                Dialogs.Show("刷入完成，AVB 校验已关闭。", "完成", MessageBoxButton.OK, MessageBoxImage.Information);
             }
             else
             {
                 Log("vbmeta 刷入失败。");
-                MessageBox.Show(
+                Dialogs.Show(
                     "刷入失败，请查看日志。\n\n可尝试：先用「关闭校验（改 flags）」改好 vbmeta，再用普通 fastboot flash 刷入。",
                     "刷入失败", MessageBoxButton.OK, MessageBoxImage.Error);
             }
@@ -568,7 +568,7 @@ public partial class SuperPage : Page
     {
         if (_vbmetaPath.Length > 0 && File.Exists(_vbmetaPath)) return true;
 
-        MessageBox.Show("请先选择或生成一个 vbmeta 镜像。", "提示", MessageBoxButton.OK, MessageBoxImage.Warning);
+        Dialogs.Show("请先选择或生成一个 vbmeta 镜像。", "提示", MessageBoxButton.OK, MessageBoxImage.Warning);
         return false;
     }
 

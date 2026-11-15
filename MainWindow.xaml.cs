@@ -8,7 +8,7 @@ using Wpf.Ui.Controls;
 
 namespace Mosytool;
 
-public partial class MainWindow : FluentWindow
+public partial class MainWindow : Controls.MtWindow
 {
     private static bool _autoChecked;
 
@@ -92,6 +92,9 @@ public partial class MainWindow : FluentWindow
 
             try { window.AllowClose(); }
             catch (InvalidOperationException) {  }
+
+            // 清理收尾后再淡出，避免窗口“啪”地消失。
+            await PlayCloseAnimationAsync();
 
             _ = Dispatcher.BeginInvoke(new Action(() => Application.Current.Shutdown()),
                 System.Windows.Threading.DispatcherPriority.Background);

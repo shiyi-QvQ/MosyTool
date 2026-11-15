@@ -28,7 +28,7 @@
             <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}"/>
         </Style>
         <!-- 卡片：统一边框与留白，避免每张卡重复写四行属性 -->
-        <Style x:Key="Card" TargetType="Border">
+        <Style x:Key="Card" TargetType="ctl:SquircleBorder">
             <Setter Property="Background" Value="{DynamicResource CardBackgroundFillColorDefaultBrush}"/>
             <Setter Property="BorderBrush" Value="{DynamicResource CardStrokeColorDefaultBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
@@ -57,7 +57,7 @@
             <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}"/>
         </Style>
         <!-- 卡片下边距：让纵向排列的卡片间距一致 -->
-        <Style x:Key="CardSpacing" TargetType="Border" BasedOn="{StaticResource Card}">
+        <Style x:Key="CardSpacing" TargetType="ctl:SquircleBorder" BasedOn="{StaticResource Card}">
             <Setter Property="Margin" Value="0,0,0,16"/>
         </Style>
         <!-- 侧边上下滑动条：换成 App.xaml 里的细条，覆盖系统默认的粗轨道+箭头按钮 -->
@@ -81,7 +81,7 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="{x:Type ListBoxItem}">
-                        <Border x:Name="Bg" Background="Transparent" CornerRadius="8"
+                        <ctl:SquircleBorder x:Name="Bg" Background="Transparent" CornerRadius="8"
                                 Margin="0,1,16,1">
                             <Grid>
                                 <Grid.ColumnDefinitions>
@@ -96,7 +96,7 @@
                                 <ContentPresenter Grid.Column="1" ContentSource="Content"
                                                   Margin="12,9,10,9" VerticalAlignment="Center"/>
                             </Grid>
-                        </Border>
+                        </ctl:SquircleBorder>
                         <ControlTemplate.Triggers>
                             <!-- IsSelected 写在后面：鼠标停在选中项上时仍然是选中态配色 -->
                             <Trigger Property="IsMouseOver" Value="True">
@@ -173,12 +173,14 @@
         </Style>
     </Page.Resources>
 
-    <Grid Margin="24,18,24,18">
+    <Grid x:Name="RootLayout" Margin="24,18,24,18">
         <Grid.RowDefinitions>
             <!-- 顶部：左右两列的分组标题（操作 / 日志） -->
             <RowDefinition Height="Auto"/>
             <!-- 中部：左「操作」侧栏 + 中操作面板 + 右日志。窗口越高，这里越大 -->
             <RowDefinition Height="*" MinHeight="260"/>
+            <!-- 窄窗口时日志整块落到这行；宽窗口下高度为 0，日志待在右侧 -->
+            <RowDefinition x:Name="LogRow" Height="0"/>
             <!-- 底部：设备状态条。对应 Antumbra 底部那条 "Antumbra • Waiting for MTK device…" -->
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
@@ -186,15 +188,15 @@
             <!-- 侧栏列宽必须与 SideNavItem 的 Width 一致，否则内容面板会与侧栏错位 -->
             <ColumnDefinition Width="214"/>
             <!-- 中间：当前操作的面板。给个宽度下限，窗口收窄时不会把卡片里的表单压到看不出内容 -->
-            <ColumnDefinition Width="*" MinWidth="380"/>
+            <ColumnDefinition Width="*" MinWidth="340"/>
             <!-- 侧栏/日志之间的呼吸空隙 -->
-            <ColumnDefinition Width="20"/>
-            <!-- 右侧：执行日志 -->
-            <ColumnDefinition Width="320" MinWidth="260"/>
+            <ColumnDefinition x:Name="GapColumn" Width="16"/>
+            <!-- 右侧：执行日志。用比例列，窗口不够宽时自己收窄，避免整行溢出被窗口裁掉 -->
+            <ColumnDefinition x:Name="LogColumn" Width="0.9*" MinWidth="250" MaxWidth="420"/>
         </Grid.ColumnDefinitions>
 
         <TextBlock Grid.Row="0" Grid.Column="0" Text="操作" Style="{StaticResource ColumnHead}"/>
-        <TextBlock Grid.Row="0" Grid.Column="3" Text="日志" Style="{StaticResource ColumnHead}"/>
+        <TextBlock x:Name="LogHead" Grid.Row="0" Grid.Column="3" Text="日志" Style="{StaticResource ColumnHead}"/>
 
         <!-- ==================== 侧栏：操作导航 ====================
              只用它做导航，选中项索引双向同步给下面的 TabControl。
@@ -253,7 +255,7 @@
                             <TextBlock Text="设备控制" Style="{StaticResource PanelTitle}"/>
                             <TextBlock Text="Device" Style="{StaticResource PanelTitleEn}"/>
                         </StackPanel>
-                    <Border Style="{StaticResource CardSpacing}">
+                    <ctl:SquircleBorder Style="{StaticResource CardSpacing}">
                         <StackPanel>
                             <TextBlock Text="重启与开关机" Style="{StaticResource SubHeader}"/>
                             <WrapPanel>
@@ -318,16 +320,21 @@
 
                             <TextBlock Text="强制进入 BROM（应急）" Style="{StaticResource SubHeader}"
                                        Margin="0,6,0,8"/>
-                            <StackPanel Orientation="Horizontal">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
                                 <ui:Button Appearance="Secondary" Margin="0,0,12,0" Padding="10,4"
+                                           VerticalAlignment="Center"
                                            Content="崩溃至 BROM" Click="DevCrash_Click"
                                            ToolTip="强制设备立即崩溃并重启到 BROM 模式。仅在设备无响应、其他方式都连不上时使用。"/>
-                                <TextBlock Text="用掉一次开机机会，之后需重新断电再进模式。"
-                                           Style="{StaticResource FieldLabel}"/>
-                            </StackPanel>
+                                <TextBlock Grid.Column="1" Text="用掉一次开机机会，之后需重新断电再进模式。"
+                                           Style="{StaticResource FieldLabel}" TextWrapping="Wrap"/>
+                            </Grid>
 
                         </StackPanel>
-                    </Border>
+                    </ctl:SquircleBorder>
                     </StackPanel>
                 </ScrollViewer>
             </TabItem>
@@ -341,27 +348,38 @@
                             <TextBlock Text="分区管理" Style="{StaticResource PanelTitle}"/>
                             <TextBlock Text="Partitions" Style="{StaticResource PanelTitleEn}"/>
                         </StackPanel>
-                            <Border Style="{StaticResource CardSpacing}">
+                            <ctl:SquircleBorder Style="{StaticResource CardSpacing}">
                                 <StackPanel>
-                                    <StackPanel Orientation="Horizontal">
-                                        <ui:SymbolIcon Symbol="Box24" Style="{StaticResource CardIcon}"/>
-                                        <TextBlock Text="分区表" Style="{StaticResource CardHead}"/>
-                                        <ui:Button x:Name="LoadPartitionButton" Appearance="Secondary"
-                                                   Margin="16,0,0,0" Padding="10,4"
-                                                   Content="读取分区表" Click="LoadPartition_Click"/>
-                                        <ui:Button x:Name="ExportPartitionButton" Appearance="Secondary"
-                                                   Margin="8,0,0,0" Padding="10,4"
-                                                   Content="导出 CSV" Click="ExportPartition_Click"
-                                                   IsEnabled="False"/>
-                                        <ui:Button x:Name="BackupSelectedButton" Appearance="Secondary"
-                                                   Margin="8,0,0,0" Padding="10,4"
-                                                   Content="备份选中" Click="BackupSelected_Click"
-                                                   IsEnabled="False"/>
-                                        <ui:Button x:Name="EraseSelectedButton" Appearance="Secondary"
-                                                   Margin="8,0,0,0" Padding="10,4"
-                                                   Content="擦除选中" Click="EraseSelected_Click"
-                                                   IsEnabled="False"/>
-                                    </StackPanel>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <StackPanel Orientation="Horizontal">
+                                            <ui:SymbolIcon Symbol="Box24" Style="{StaticResource CardIcon}"/>
+                                            <TextBlock Text="分区表" Style="{StaticResource CardHead}"/>
+                                        </StackPanel>
+
+                                        <!-- 按钮放 WrapPanel：面板变窄时换行，而不是顶出卡片右边缘 -->
+                                        <WrapPanel Grid.Column="1" HorizontalAlignment="Right" Margin="16,0,0,0">
+                                            <ui:Button x:Name="LoadPartitionButton" Appearance="Secondary"
+                                                       Margin="0,0,8,6" Padding="10,4"
+                                                       Content="读取分区表" Click="LoadPartition_Click"/>
+                                            <ui:Button x:Name="ExportPartitionButton" Appearance="Secondary"
+                                                       Margin="0,0,8,6" Padding="10,4"
+                                                       Content="导出 CSV" Click="ExportPartition_Click"
+                                                       IsEnabled="False"/>
+                                            <ui:Button x:Name="BackupSelectedButton" Appearance="Secondary"
+                                                       Margin="0,0,8,6" Padding="10,4"
+                                                       Content="备份选中" Click="BackupSelected_Click"
+                                                       IsEnabled="False"/>
+                                            <ui:Button x:Name="EraseSelectedButton" Appearance="Secondary"
+                                                       Margin="0,0,0,6" Padding="10,4"
+                                                       Content="擦除选中" Click="EraseSelected_Click"
+                                                       IsEnabled="False"/>
+                                        </WrapPanel>
+                                    </Grid>
 
                                     <TextBlock x:Name="PartitionCountText"
                                                Text="尚未读取，点击「读取分区表」获取设备分区。"
@@ -391,8 +409,8 @@
                                                FontSize="12" Margin="0,8,0,0" TextWrapping="Wrap"
                                                Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
                                 </StackPanel>
-                            </Border>
-                            <Border Style="{StaticResource CardSpacing}">
+                            </ctl:SquircleBorder>
+                            <ctl:SquircleBorder Style="{StaticResource CardSpacing}">
                                 <StackPanel>
                                     <StackPanel Orientation="Horizontal">
                                         <ui:SymbolIcon Symbol="ArrowDownload24" Style="{StaticResource CardIcon}"/>
@@ -447,7 +465,7 @@
                                                    Content="擦除分区（erase）" Click="ErasePart_Click"/>
                                     </WrapPanel>
                                 </StackPanel>
-                            </Border>
+                            </ctl:SquircleBorder>
                         <!-- 整机读取 / 整机写入 并排，省一屏高度 -->
                         <Grid>
                             <Grid.ColumnDefinitions>
@@ -456,7 +474,7 @@
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
 
-                            <Border Grid.Column="0" Style="{StaticResource Card}">
+                            <ctl:SquircleBorder Grid.Column="0" Style="{StaticResource Card}">
                                 <StackPanel>
                                     <StackPanel Orientation="Horizontal">
                                         <ui:SymbolIcon Symbol="Open24" Style="{StaticResource CardIcon}"/>
@@ -491,8 +509,8 @@
 
                                     <ui:Button Appearance="Secondary" Content="读取所有分区" Click="ReadAll_Click"/>
                                 </StackPanel>
-                            </Border>
-                            <Border Grid.Column="2" Style="{StaticResource Card}">
+                            </ctl:SquircleBorder>
+                            <ctl:SquircleBorder Grid.Column="2" Style="{StaticResource Card}">
                                 <StackPanel>
                                     <StackPanel Orientation="Horizontal">
                                         <ui:SymbolIcon Symbol="Save24" Style="{StaticResource CardIcon}"/>
@@ -527,7 +545,7 @@
 
                                     <ui:Button Appearance="Primary" Content="写入所有分区" Click="WriteAll_Click"/>
                                 </StackPanel>
-                            </Border>
+                            </ctl:SquircleBorder>
                         </Grid>
                     </StackPanel>
                 </ScrollViewer>
@@ -548,7 +566,7 @@
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
 
-                            <Border Grid.Column="0" Style="{StaticResource Card}">
+                            <ctl:SquircleBorder Grid.Column="0" Style="{StaticResource Card}">
                                 <StackPanel>
                                     <StackPanel Orientation="Horizontal">
                                         <ui:SymbolIcon Symbol="Flash24" Style="{StaticResource CardIcon}"/>
@@ -588,9 +606,9 @@
                                                    ToolTip="擦除指定地址与长度范围内的 flash 数据，操作不可恢复。"/>
                                     </WrapPanel>
                                 </StackPanel>
-                            </Border>
+                            </ctl:SquircleBorder>
 
-                            <Border Grid.Column="2" Style="{StaticResource Card}">
+                            <ctl:SquircleBorder Grid.Column="2" Style="{StaticResource Card}">
                                 <StackPanel>
                                     <StackPanel Orientation="Horizontal">
                                         <ui:SymbolIcon Symbol="Info24" Style="{StaticResource CardIcon}"/>
@@ -627,11 +645,11 @@
                                                    Content="写入内存（poke）" Click="Poke_Click"/>
                                     </WrapPanel>
                                 </StackPanel>
-                            </Border>
+                            </ctl:SquircleBorder>
                         </Grid>
 
                         <!-- 寄存器读写：peek/poke 面向「内存 + 文件」，而寄存器只关心一个 32 位值 -->
-                        <Border Style="{StaticResource Card}" Margin="0,16,0,0">
+                        <ctl:SquircleBorder Style="{StaticResource Card}" Margin="0,16,0,0">
                             <StackPanel>
                                 <StackPanel Orientation="Horizontal">
                                     <ui:SymbolIcon Symbol="DeveloperBoard24" Style="{StaticResource CardIcon}"/>
@@ -664,7 +682,7 @@
                                                Content="写入寄存器" Click="RegWrite_Click"/>
                                 </WrapPanel>
                             </StackPanel>
-                        </Border>
+                        </ctl:SquircleBorder>
                     </StackPanel>
                 </ScrollViewer>
             </TabItem>
@@ -678,7 +696,7 @@
                             <TextBlock Text="安全区" Style="{StaticResource PanelTitle}"/>
                             <TextBlock Text="Security" Style="{StaticResource PanelTitleEn}"/>
                         </StackPanel>
-                        <Border Style="{StaticResource CardSpacing}">
+                        <ctl:SquircleBorder Style="{StaticResource CardSpacing}">
                             <StackPanel>
                                 <StackPanel Orientation="Horizontal">
                                     <ui:SymbolIcon Symbol="LockClosed24" Style="{StaticResource CardIcon}"/>
@@ -743,10 +761,10 @@
                                                ToolTip="擦除指定扇区范围内的 RPMB 数据。擦除后指纹 / 密钥不可恢复，请先完整读取备份。"/>
                                 </WrapPanel>
                             </StackPanel>
-                        </Border>
+                        </ctl:SquircleBorder>
 
                         <!-- RPMB 锁状态：与 seccfg 是两套机制，且仅 UFS 生效 -->
-                        <Border Style="{StaticResource CardSpacing}">
+                        <ctl:SquircleBorder Style="{StaticResource CardSpacing}">
                             <StackPanel>
                                 <StackPanel Orientation="Horizontal">
                                     <ui:SymbolIcon Symbol="LockOpen24" Style="{StaticResource CardIcon}"/>
@@ -765,7 +783,7 @@
                                                ToolTip="把 RPMB 置为解锁（默认密钥）状态，仅 UFS 存储可用。"/>
                                 </WrapPanel>
                             </StackPanel>
-                        </Border>
+                        </ctl:SquircleBorder>
 
                         <!-- SEJ AES 与密钥派生：都只用设备内部密钥，不落盘 -->
                         <Grid>
@@ -775,7 +793,7 @@
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
 
-                            <Border Grid.Column="0" Style="{StaticResource Card}">
+                            <ctl:SquircleBorder Grid.Column="0" Style="{StaticResource Card}">
                                 <StackPanel>
                                     <StackPanel Orientation="Horizontal">
                                         <ui:SymbolIcon Symbol="Key24" Style="{StaticResource CardIcon}"/>
@@ -852,9 +870,9 @@
 
                                     <ui:Button Appearance="Primary" Content="执行 SEJ 运算" Click="SejRun_Click"/>
                                 </StackPanel>
-                            </Border>
+                            </ctl:SquircleBorder>
 
-                            <Border Grid.Column="2" Style="{StaticResource Card}">
+                            <ctl:SquircleBorder Grid.Column="2" Style="{StaticResource Card}">
                                 <StackPanel>
                                     <StackPanel Orientation="Horizontal">
                                         <ui:SymbolIcon Symbol="Key24" Style="{StaticResource CardIcon}"/>
@@ -882,7 +900,7 @@
                                     <ui:Button Appearance="Primary" Content="派生密钥" Click="KeyDerive_Click"
                                                ToolTip="结果属于敏感信息，请勿外传。"/>
                                 </StackPanel>
-                            </Border>
+                            </ctl:SquircleBorder>
                         </Grid>
                     </StackPanel>
                 </ScrollViewer>
@@ -897,7 +915,7 @@
                             <TextBlock Text="整包刷写" Style="{StaticResource PanelTitle}"/>
                             <TextBlock Text="Scatter Flash" Style="{StaticResource PanelTitleEn}"/>
                         </StackPanel>
-                        <Border Style="{StaticResource CardSpacing}">
+                        <ctl:SquircleBorder Style="{StaticResource CardSpacing}">
                             <StackPanel>
                                 <StackPanel Orientation="Horizontal">
                                     <ui:SymbolIcon Symbol="Flash24" Style="{StaticResource CardIcon}"/>
@@ -922,10 +940,10 @@
 
                                 <ui:Button Appearance="Primary" Content="开始整包刷写" Click="ScatterFlash_Click"/>
                             </StackPanel>
-                        </Border>
+                        </ctl:SquircleBorder>
 
                         <!-- XFlash 单分区刷写：与 scatter 同属「刷写」，放同一面板 -->
-                        <Border Style="{StaticResource CardSpacing}">
+                        <ctl:SquircleBorder Style="{StaticResource CardSpacing}">
                             <StackPanel>
                                 <StackPanel Orientation="Horizontal">
                                     <ui:SymbolIcon Symbol="ArrowDownload24" Style="{StaticResource CardIcon}"/>
@@ -957,10 +975,10 @@
 
                                 <ui:Button Appearance="Primary" Content="XFlash 刷写" Click="XfFlash_Click"/>
                             </StackPanel>
-                        </Border>
+                        </ctl:SquircleBorder>
 
                         <!-- BROM payload 注入：只在 BROM 模式下可用 -->
-                        <Border Style="{StaticResource Card}">
+                        <ctl:SquircleBorder Style="{StaticResource Card}">
                             <StackPanel>
                                 <StackPanel Orientation="Horizontal">
                                     <ui:SymbolIcon Symbol="DeveloperBoard24" Style="{StaticResource CardIcon}"/>
@@ -998,7 +1016,7 @@
 
                                 <ui:Button Appearance="Primary" Content="注入并执行" Click="BootPlInject_Click"/>
                             </StackPanel>
-                        </Border>
+                        </ctl:SquircleBorder>
                     </StackPanel>
                 </ScrollViewer>
             </TabItem>
@@ -1013,7 +1031,7 @@
                             <TextBlock Text="Settings" Style="{StaticResource PanelTitleEn}"/>
                         </StackPanel>
 
-                        <Border Style="{StaticResource Card}">
+                        <ctl:SquircleBorder Style="{StaticResource Card}">
                             <StackPanel>
                                 <!-- 引导文件：标题上直接写摘要，要改再展开 -->
                                 <Expander x:Name="BootFilesExpander" IsExpanded="True"
@@ -1079,14 +1097,14 @@
                                     </WrapPanel>
                                 </Expander>
                             </StackPanel>
-                        </Border>
+                        </ctl:SquircleBorder>
                     </StackPanel>
                 </ScrollViewer>
             </TabItem>
         </TabControl>
 
         <!-- ==================== 执行日志（右栏） ==================== -->
-        <Border Grid.Row="1" Grid.Column="3" Style="{StaticResource Card}">
+        <ctl:SquircleBorder Grid.Row="1" Grid.Column="3" x:Name="LogCard" Style="{StaticResource Card}">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
@@ -1120,12 +1138,12 @@
                              Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                              VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"/>
             </Grid>
-        </Border>
+        </ctl:SquircleBorder>
 
         <!-- ==================== 底部状态条 ====================
              对应 Antumbra 底部那条 "Antumbra • Waiting for MTK device…"：
              左边是设备与内核状态，右边是「停止」，运行时状态一眼可见。 -->
-        <Border Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="4" Margin="0,14,0,0"
+        <ctl:SquircleBorder Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="4" Margin="0,14,0,0"
                 Background="{DynamicResource ControlFillColorSecondaryBrush}"
                 CornerRadius="8" Padding="14,10">
             <Grid>
@@ -1157,6 +1175,6 @@
                            Content="停止" Click="Stop_Click" IsEnabled="False"
                            ToolTip="中断当前正在执行的操作。"/>
             </Grid>
-        </Border>
+        </ctl:SquircleBorder>
     </Grid>
 </Page>

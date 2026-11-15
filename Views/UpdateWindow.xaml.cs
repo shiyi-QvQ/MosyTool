@@ -15,7 +15,7 @@ using Mosytool.Services.Api;
 namespace Mosytool.Views;
 
 /// <summary>更新提示与下载窗口。</summary>
-public partial class UpdateWindow : Wpf.Ui.Controls.FluentWindow
+public partial class UpdateWindow : MtWindow
 {
     private readonly AppRelease _release;
     private readonly bool _forced;
@@ -147,7 +147,7 @@ public partial class UpdateWindow : Wpf.Ui.Controls.FluentWindow
         {
             Process.Start(new ProcessStartInfo(path) { UseShellExecute = true });
 
-            MessageBox.Show(this,
+            Dialogs.Show(this,
                 "安装程序已启动。\n\n请按提示完成安装，安装完成后重新打开本工具即可。",
                 "下载完成", MessageBoxButton.OK, MessageBoxImage.Information);
 
@@ -160,7 +160,7 @@ public partial class UpdateWindow : Wpf.Ui.Controls.FluentWindow
             try
             {
                 Process.Start(new ProcessStartInfo("explorer.exe", $"/select,\"{path}\"") { UseShellExecute = true });
-                MessageBox.Show(this,
+                Dialogs.Show(this,
                     $"已下载到：\n{path}\n\n请手动解压或运行，完成后重新打开本工具。",
                     "下载完成", MessageBoxButton.OK, MessageBoxImage.Information);
             }
@@ -219,7 +219,7 @@ public partial class UpdateWindow : Wpf.Ui.Controls.FluentWindow
         Progress.Visibility = Visibility.Collapsed;
         StatusText.Text     = message;
 
-        MessageBox.Show(this, message, "更新失败", MessageBoxButton.OK, MessageBoxImage.Warning);
+        Dialogs.Show(this, message, "更新失败", MessageBoxButton.OK, MessageBoxImage.Warning);
     }
 
     /// <summary>

@@ -166,7 +166,7 @@ public partial class AndroidGeneralPage : Page
     }
 
     private static bool Confirm(string title, string text)
-        => MessageBox.Show(text, title, MessageBoxButton.OKCancel, MessageBoxImage.Warning) == MessageBoxResult.OK;
+        => Dialogs.Show(text, title, MessageBoxButton.OKCancel, MessageBoxImage.Warning) == MessageBoxResult.OK;
 
     // ==================== 界面状态 ====================
 

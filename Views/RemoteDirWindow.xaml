@@ -1,19 +1,19 @@
-<ui:FluentWindow x:Class="Mosytool.Views.RemoteDirWindow"
+<controls:MtWindow x:Class="Mosytool.Views.RemoteDirWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+        xmlns:controls="clr-namespace:Mosytool.Controls"
         Title="选择手机上的目录"
         Width="640" Height="600"
         MinWidth="520" MinHeight="440"
         WindowStartupLocation="CenterOwner"
-        WindowBackdropType="Mica"
-        WindowCornerPreference="Round"
         ShowInTaskbar="False"
-        Background="{DynamicResource Win12MicaBrush}"
+        Background="Transparent"
         FontFamily="Microsoft YaHei UI">
 
-    <Grid Background="{DynamicResource Win12MicaBrush}">
+    <Grid Background="Transparent">
         <Grid.RowDefinitions>
+            <RowDefinition Height="48"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
@@ -22,8 +22,10 @@
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
+        <controls:WindowTitleBar Grid.Row="0" Title="选择手机上的目录" Icon="Folder24"/>
+
         <!-- 路径行：上一级 / 当前路径（可直接改） / 转到 -->
-        <Grid Grid.Row="0" Margin="20,18,20,0">
+        <Grid Grid.Row="1" Margin="20,10,20,0">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="*"/>
@@ -40,10 +42,10 @@
         </Grid>
 
         <!-- 常用目录 -->
-        <WrapPanel x:Name="QuickPanel" Grid.Row="1" Margin="20,12,20,0"/>
+        <WrapPanel x:Name="QuickPanel" Grid.Row="2" Margin="20,12,20,0"/>
 
         <!-- 子文件夹列表 -->
-        <Border Grid.Row="2" Margin="20,4,20,0" CornerRadius="8"
+        <controls:SquircleBorder Grid.Row="3" Margin="20,4,20,0" CornerRadius="8"
                 BorderThickness="1"
                 BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
                 Background="{DynamicResource CardBackgroundFillColorDefaultBrush}">
@@ -61,10 +63,10 @@
                     </DataTemplate>
                 </ListView.ItemTemplate>
             </ListView>
-        </Border>
+        </controls:SquircleBorder>
 
         <!-- 在当前目录新建文件夹 -->
-        <Grid Grid.Row="3" Margin="20,12,20,0">
+        <Grid Grid.Row="4" Margin="20,12,20,0">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="Auto"/>
@@ -75,11 +77,11 @@
                        Content="新建" Click="Create_Click"/>
         </Grid>
 
-        <TextBlock x:Name="StatusText" Grid.Row="4" Margin="20,10,20,0" FontSize="12"
+        <TextBlock x:Name="StatusText" Grid.Row="5" Margin="20,10,20,0" FontSize="12"
                    TextWrapping="Wrap"
                    Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
 
-        <Grid Grid.Row="5" Margin="20,14,20,18">
+        <Grid Grid.Row="6" Margin="20,14,20,18">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="Auto"/>
@@ -96,4 +98,4 @@
             </StackPanel>
         </Grid>
     </Grid>
-</ui:FluentWindow>
+</controls:MtWindow>
