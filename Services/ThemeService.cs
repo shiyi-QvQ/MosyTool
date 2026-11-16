@@ -86,8 +86,11 @@ public static class ThemeService
         IsDark = dark;
 
         // 1) 切 WPF-UI 的控件资源字典（同时会把已打开窗口的标题栏一起换色）
+        //
+        // 不传 Acrylic：WPF-UI 会给已经打开的窗口套 DWM 系统背景（mica/acrylic），
+        // 自绘窗口用不上，还会在窗口外那圈透明边距上留下痕迹。
         ApplicationThemeManager.Apply(dark ? ApplicationTheme.Dark : ApplicationTheme.Light,
-                                      WindowBackdropType.Acrylic, updateAccent: false);
+                                      WindowBackdropType.None, updateAccent: false);
 
         // 2) 覆盖本应用自己的设计令牌
         ApplyPalette(dark);
@@ -95,11 +98,30 @@ public static class ThemeService
         // 3) 强调色跟着换一套（深色下用更亮的一档，浅色下用深一档，保证对比度）
         App.ApplyAccent(SettingsService.AccentColor);
 
+        // 4) 最后复位窗口的合成底色。WPF-UI 切主题时会把已打开窗口的
+        //    CompositionTarget.BackgroundColor 设成 SystemColors.WindowColor（白），
+        //    自绘窗口的阴影就靠窗口四周那圈 16px 透明边距透出来，
+        //    合成底色一变白，四周就会糊出一圈白边，切回浅色也不会恢复。
+        //    必须放在切主题和换强调色之后，否则会被它们重新写回白色。
+        ResetWindowSurfaces();
+
         if (persist) SettingsService.SaveThemeMode(mode.ToString().ToLowerInvariant());
         if (notify) Changed?.Invoke();
     }
 
     // ===================== 调色板 =====================
+
+    /// <summary>把每个自绘窗口的合成底色复位成透明，详见 <see cref="Controls.MtWindow.ResetWindowSurface"/>。</summary>
+    private static void ResetWindowSurfaces()
+    {
+        if (Application.Current is null) return;
+
+        foreach (Window window in Application.Current.Windows)
+        {
+            if (window is Controls.MtWindow mtWindow)
+                mtWindow.ResetWindowSurface();
+        }
+    }
 
     private static void ApplyPalette(bool dark)
     {

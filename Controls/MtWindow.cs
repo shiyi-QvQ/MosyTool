@@ -84,6 +84,17 @@ public class MtWindow : Window
         SetResourceReference(StyleProperty, typeof(MtWindow));
     }
 
+    static MtWindow()
+    {
+        // 自绘窗口的底色必须永远是透明的：阴影就画在窗口四周那圈 16px 边距里，
+        // 底色一旦被别人写成不透明色（WPF-UI 换主题时会把窗口 Background 写成
+        // 主题底色，实测是 #FFFAFAFA），外面就会多出一圈白边，切回浅色也不恢复。
+        // 这里直接把 Background 强制约束成透明，谁写都改不掉。
+        BackgroundProperty.OverrideMetadata(typeof(MtWindow),
+            new FrameworkPropertyMetadata(Brushes.Transparent, FrameworkPropertyMetadataOptions.None,
+                null, new CoerceValueCallback((_, _) => Brushes.Transparent)));
+    }
+
     /// <summary>窗口外框的底色（由 App.xaml 的隐式样式绑定到 Win12MicaBrush）。</summary>
     public Brush? WindowBackground
     {
@@ -322,6 +333,35 @@ public class MtWindow : Window
         UpdateFrameForState();
     }
 
+    /// <summary>
+    /// 把窗口的合成底色复位成透明，并清掉可能被套上的系统背景。
+    ///
+    /// WPF-UI 每次切主题都会给已打开的窗口做一次「恢复内容背景」：
+    /// 把 <see cref="HwndSource.CompositionTarget"/> 的 BackgroundColor 设成
+    /// SystemColors.WindowColor（白色），同时给窗口写一个不透明的主题底色。
+    /// 自绘窗口是分层窗口，阴影就画在窗口四周那圈 16px 透明边距里，
+    /// 合成底色一变白，整圈边距就被填成白色 —— 看起来就是阴影变成了白色光晕，
+    /// 而且切回浅色也不会恢复。这里把它复位成透明。
+    /// </summary>
+    public void ResetWindowSurface()
+    {
+        Background = Brushes.Transparent;
+
+        var handle = new WindowInteropHelper(this).Handle;
+        if (handle == IntPtr.Zero) return;
+
+        if (HwndSource.FromHwnd(handle)?.CompositionTarget is { } composition)
+            composition.BackgroundColor = Colors.Transparent;
+
+        // 顺带清掉 DWM 系统背景（Mica / Acrylic），自绘窗口用不上它
+        var none = new MARGINS();
+        _ = DwmExtendFrameIntoClientArea(handle, ref none);
+
+        // DWMWA_SYSTEMBACKDROP_TYPE = 38；DWMSBT_NONE = 1（Windows 11 22H2+ 才有）
+        var backdrop = DwmsbtNone;
+        _ = DwmSetWindowAttribute(handle, DwmwaSystemBackdropType, ref backdrop, sizeof(int));
+    }
+
     private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
     {
         switch (msg)
@@ -540,6 +580,24 @@ public class MtWindow : Window
         public int Right;
         public int Bottom;
     }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct MARGINS
+    {
+        public int Left;
+        public int Top;
+        public int Right;
+        public int Bottom;
+    }
+
+    private const int DwmwaSystemBackdropType = 38;
+    private const int DwmsbtNone = 1;
+
+    [DllImport("dwmapi.dll")]
+    private static extern int DwmExtendFrameIntoClientArea(IntPtr hwnd, ref MARGINS margins);
+
+    [DllImport("dwmapi.dll")]
+    private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attribute, ref int value, int size);
 
     [StructLayout(LayoutKind.Sequential)]
     private struct MINMAXINFO
