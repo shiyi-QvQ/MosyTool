@@ -32,6 +32,9 @@ public class MtWindow : Window
     private const int WM_NCHITTEST = 0x0084;
     private const int WM_NCLBUTTONDBLCLK = 0x00A3;
     private const int WM_GETMINMAXINFO = 0x0024;
+    private const int WM_SYSCOMMAND = 0x0112;
+
+    private const int SC_MINIMIZE = 0xF020;
 
     private const int HTCLIENT = 1;
     private const int HTCAPTION = 2;
@@ -54,11 +57,13 @@ public class MtWindow : Window
         DependencyProperty.Register(nameof(FrameCornerRadius), typeof(double), typeof(MtWindow),
             new PropertyMetadata(NormalCornerRadius));
 
-    /// <summary>还原动画的缩放起点：从 96% 弹回 100%。</summary>
+    /// <summary>还原动画的缩放起点：从 96% 舒展到 100%。</summary>
     private const double RestoreScaleFrom = 0.96;
+    private const double MinimizeScaleTo = 0.94;
 
-    private static readonly TimeSpan RestoreFadeDuration = TimeSpan.FromMilliseconds(160);
-    private static readonly TimeSpan RestoreScaleDuration = TimeSpan.FromMilliseconds(220);
+    private static readonly TimeSpan MinimizeDuration = TimeSpan.FromMilliseconds(180);
+    private static readonly TimeSpan RestoreFadeDuration = TimeSpan.FromMilliseconds(180);
+    private static readonly TimeSpan RestoreScaleDuration = TimeSpan.FromMilliseconds(240);
 
     private ResizeEdge _resizeEdge;
     private Point _resizeStartScreen;
@@ -130,6 +135,8 @@ public class MtWindow : Window
             : WindowState.Maximized;
     }
 
+    private bool _isMinimizing;
+
     private void OnWindowStateChanged()
     {
         var previous = _lastState;
@@ -137,23 +144,81 @@ public class MtWindow : Window
 
         UpdateFrameForState();
 
+        // 最小化时保持透明边距和圆角，让收束动画以正常窗口的轮廓结束。
+        if (WindowState == WindowState.Minimized)
+        {
+            FrameMargin = new Thickness(NormalFrameMargin);
+            FrameCornerRadius = NormalCornerRadius;
+        }
+
         // 自绘窗口是分层窗口（AllowsTransparency），系统不会给它做还原动画，
-        // 所以自己补一段「淡入 + 轻微放大」，从任务栏还原时才有反馈。
+        // 所以自己补一段「淡入 + 舒展」，从任务栏还原时才有连续的反馈。
         if (previous == WindowState.Minimized && WindowState != WindowState.Minimized)
             PlayRestoreAnimation();
     }
 
+    /// <summary>最小化前先淡出、轻微收束；完成后才真正把窗口交给系统最小化。</summary>
+    public void MinimizeWithAnimation()
+    {
+        if (WindowState == WindowState.Minimized) return;
+
+        if (_isMinimizing || !SystemParameters.ClientAreaAnimation)
+        {
+            WindowState = WindowState.Minimized;
+            return;
+        }
+
+        if (VisualTreeHelper.GetChild(this, 0) is not FrameworkElement root)
+        {
+            WindowState = WindowState.Minimized;
+            return;
+        }
+
+        _isMinimizing = true;
+        IsHitTestVisible = false;
+
+        // 使用 Quartic 的尾部缓出：收起和展开都先快后慢，避免线性匀速的机械感。
+        var ease = new QuarticEase { EasingMode = EasingMode.EaseOut };
+        var fade = new DoubleAnimation(0, MinimizeDuration) { EasingFunction = ease };
+        fade.Completed += (_, _) =>
+        {
+            if (!_isMinimizing) return;
+
+            _isMinimizing = false;
+            BeginAnimation(OpacityProperty, null);
+            Opacity = 1;
+            root.RenderTransform = Transform.Identity;
+            IsHitTestVisible = true;
+            WindowState = WindowState.Minimized;
+        };
+
+        BeginAnimation(OpacityProperty, fade);
+
+        var scale = new ScaleTransform(1, 1);
+        root.RenderTransformOrigin = new Point(0.5, 0.5);
+        root.RenderTransform = scale;
+
+        var shrink = new DoubleAnimation(MinimizeScaleTo, MinimizeDuration) { EasingFunction = ease };
+        scale.BeginAnimation(ScaleTransform.ScaleXProperty, shrink);
+        scale.BeginAnimation(ScaleTransform.ScaleYProperty, shrink);
+    }
+
     private void PlayRestoreAnimation()
     {
+        // 动画未播完就从任务栏点回来时，作废那次最小化的完成回调，
+        // 避免它在还原之后又把窗口收回去。
+        _isMinimizing = false;
+        BeginAnimation(OpacityProperty, null);
+        Opacity = 1;
+
         if (!SystemParameters.ClientAreaAnimation) return;
 
-        var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
-
+        var ease = new QuarticEase { EasingMode = EasingMode.EaseOut };
         BeginAnimation(OpacityProperty,
             new DoubleAnimation(0, 1, RestoreFadeDuration) { EasingFunction = ease });
 
         // 模板根是那层透明 Grid（阴影层 + 外框都画在里面），
-        // 缩放它等于把整圈外框一起从 96% 撑到 100%，窗口尺寸本身不动。
+        // 缩放它等于把整圈外框一起从 96% 舒展到 100%，窗口尺寸本身不动。
         if (VisualTreeHelper.GetChild(this, 0) is not FrameworkElement root) return;
 
         var scale = new ScaleTransform(RestoreScaleFrom, RestoreScaleFrom);
@@ -380,6 +445,17 @@ public class MtWindow : Window
                 ToggleMaximize();
                 handled = true;
                 return IntPtr.Zero;
+
+            case WM_SYSCOMMAND:
+                // 标题栏、任务栏缩略图和任务栏右键都会走系统命令；
+                // 在这里统一截获，保证这些入口和最小化按钮的动效一致。
+                if (((int)wParam & 0xFFF0) == SC_MINIMIZE)
+                {
+                    MinimizeWithAnimation();
+                    handled = true;
+                    return IntPtr.Zero;
+                }
+                break;
 
             case WM_GETMINMAXINFO:
                 ApplyWorkingArea(hwnd, lParam);

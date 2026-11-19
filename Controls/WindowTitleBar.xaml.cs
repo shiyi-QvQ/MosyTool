@@ -83,7 +83,8 @@ public partial class WindowTitleBar : UserControl
 
     private void Minimize_Click(object sender, RoutedEventArgs e)
     {
-        if (_window is not null) _window.WindowState = WindowState.Minimized;
+        if (_window is MtWindow window) window.MinimizeWithAnimation();
+        else if (_window is not null) _window.WindowState = WindowState.Minimized;
     }
 
     private void Maximize_Click(object sender, RoutedEventArgs e)
